@@ -3,7 +3,9 @@
  * Renewal Modal Template for DLMUES Client.
  *
  * Displays a full-screen modal overlay on admin pages
- * when the license is expired past grace period.
+ * when the license is expired past grace period. Shows
+ * renewal plan, expiry date, server domain, renewal amount,
+ * and time remaining.
  *
  * @package DLMUES_Client
  * @since   1.0.0
@@ -17,38 +19,23 @@
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
+
+$server_url        = isset( $license_data['server_url'] ) ? preg_replace( '#^https?://#', '', rtrim( $license_data['server_url'], '/' ) ) : '';
+$subscription_type = isset( $license_data['subscription_type'] ) ? ucfirst( $license_data['subscription_type'] ) : '';
+$currency          = isset( $license_data['currency'] ) ? $license_data['currency'] : 'USD';
+$price             = isset( $license_data['price'] ) ? number_format( (float) $license_data['price'], 2 ) : '0.00';
+$expires_at        = isset( $license_data['expires_at'] ) ? $license_data['expires_at'] : '';
 ?>
 
-<div id="dlmues-enforcement-modal" style="
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.85);
-    z-index: 999999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-">
-    <div style="
-        background: #fff;
-        max-width: 500px;
-        width: 90%;
-        border-radius: 8px;
-        overflow: hidden;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    ">
-        <div style="background: #dc3232; color: #fff; padding: 25px 30px; text-align: center;">
-            <div style="font-size: 48px; margin-bottom: 10px;">&#9888;</div>
-            <h2 style="margin: 0; font-size: 22px; font-weight: 600;">
-                <?php esc_html_e( 'License Expired', 'dlmues-client' ); ?>
-            </h2>
+<div id="dlmues-enforcement-modal">
+    <div class="dlmues-enforcement-card">
+        <div class="dlmues-enforcement-header">
+            <span class="dlmues-icon">&#9888;</span>
+            <h2><?php esc_html_e( 'License Expired', 'dlmues-client' ); ?></h2>
         </div>
 
-        <div style="padding: 30px;">
-            <p style="font-size: 15px; line-height: 1.6; color: #333; margin-top: 0;">
+        <div class="dlmues-enforcement-body">
+            <p>
                 <?php
                 printf(
                     /* translators: %s: product name */
@@ -58,32 +45,45 @@ if ( ! defined( 'ABSPATH' ) ) {
                 ?>
             </p>
 
-            <?php if ( ! empty( $license_data['expires_at'] ) ) : ?>
-                <p style="font-size: 13px; color: #666; background: #f8f8f8; padding: 10px 15px; border-radius: 4px;">
-                    <strong><?php esc_html_e( 'Expired:', 'dlmues-client' ); ?></strong>
-                    <?php echo esc_html( $license_data['expires_at'] ); ?>
-                </p>
-            <?php endif; ?>
+            <div class="dlmues-enforcement-info">
+                <table>
+                    <?php if ( ! empty( $subscription_type ) ) : ?>
+                        <tr>
+                            <td><?php esc_html_e( 'Renewal Plan', 'dlmues-client' ); ?></td>
+                            <td><?php echo esc_html( $subscription_type ); ?></td>
+                        </tr>
+                    <?php endif; ?>
 
-            <div style="margin-top: 25px; text-align: center;">
-                <a href="<?php echo esc_url( $settings_url ); ?>" style="
-                    display: inline-block;
-                    padding: 12px 30px;
-                    background: #0073aa;
-                    color: #fff;
-                    text-decoration: none;
-                    border-radius: 4px;
-                    font-size: 15px;
-                    font-weight: 600;
-                    margin-bottom: 10px;
-                ">
+                    <?php if ( ! empty( $expires_at ) ) : ?>
+                        <tr>
+                            <td><?php esc_html_e( 'Expiry Date', 'dlmues-client' ); ?></td>
+                            <td><?php echo esc_html( $expires_at ); ?></td>
+                        </tr>
+                    <?php endif; ?>
+
+                    <?php if ( ! empty( $server_url ) ) : ?>
+                        <tr>
+                            <td><?php esc_html_e( 'License Server', 'dlmues-client' ); ?></td>
+                            <td><?php echo esc_html( $server_url ); ?></td>
+                        </tr>
+                    <?php endif; ?>
+
+                    <tr>
+                        <td><?php esc_html_e( 'Renewal Amount', 'dlmues-client' ); ?></td>
+                        <td><strong><?php echo esc_html( $currency . ' ' . $price ); ?></strong></td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="dlmues-enforcement-actions">
+                <a href="<?php echo esc_url( $settings_url ); ?>" class="dlmues-enforce-renew-btn">
                     <?php esc_html_e( 'Renew License', 'dlmues-client' ); ?>
                 </a>
-
-                <p style="font-size: 12px; color: #999; margin-top: 15px;">
-                    <?php esc_html_e( 'You can still access the license settings page to manage your license.', 'dlmues-client' ); ?>
-                </p>
             </div>
+
+            <p class="dlmues-enforcement-hint">
+                <?php esc_html_e( 'You can still access the license settings page to manage your license.', 'dlmues-client' ); ?>
+            </p>
         </div>
     </div>
 </div>

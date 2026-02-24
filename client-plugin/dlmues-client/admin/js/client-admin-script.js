@@ -30,14 +30,13 @@
          * Bind the license activation form.
          */
         bindActivation: function () {
-            $( '#dlmues-activate-form' ).on( 'submit', function ( e ) {
+            $( '#dlmues-activate-btn' ).on( 'click', function ( e ) {
                 e.preventDefault();
 
-                var $form = $( this );
-                var $btn  = $form.find( 'button[type="submit"]' );
+                var $btn = $( this );
 
-                var licenseKey = $form.find( '#dlmues-license-key' ).val();
-                var serverUrl  = $form.find( '#dlmues-server-url' ).val();
+                var licenseKey = $( '#dlmues-license-key' ).val();
+                var serverUrl  = $( '#dlmues-server-url' ).val();
 
                 if ( ! licenseKey || ! serverUrl ) {
                     DLMUES_ClientAdmin.showNotice( dlmuesClient.i18n.error, 'error' );

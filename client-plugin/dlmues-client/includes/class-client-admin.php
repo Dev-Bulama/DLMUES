@@ -294,14 +294,14 @@ class DLMUES_Client_Admin {
             <h2><?php esc_html_e( 'Renew Your License', 'dlmues-client' ); ?></h2>
             <p><?php esc_html_e( 'Your license has expired. Select a plan below to renew.', 'dlmues-client' ); ?></p>
 
-            <div id="dlmues-plans-container" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 20px 0;">
-                <div class="dlmues-plan-loading" style="grid-column: 1 / -1; text-align: center; padding: 20px;">
-                    <span class="spinner is-active" style="float: none;"></span>
-                    <?php esc_html_e( 'Loading plans...', 'dlmues-client' ); ?>
-                </div>
-            </div>
+            <p style="margin-top:20px;">
+                <button type="button" id="dlmues-open-payment" class="button button-primary button-hero">
+                    <?php esc_html_e( 'Renew License', 'dlmues-client' ); ?>
+                </button>
+            </p>
 
             <div id="dlmues-payment-message"></div>
+            <div id="dlmues-payment-overlay" class="dlmues-payment-overlay"></div>
         </div>
         <?php
     }
