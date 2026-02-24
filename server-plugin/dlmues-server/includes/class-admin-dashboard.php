@@ -739,6 +739,13 @@ class DLMUES_Admin_Dashboard {
                             </select>
                         </td>
                     </tr>
+                    <tr>
+                        <th><label for="dlmues_default_trial_days"><?php esc_html_e( 'Default Trial Period (days)', 'dlmues-server' ); ?></label></th>
+                        <td>
+                            <input type="number" name="dlmues_default_trial_days" id="dlmues_default_trial_days" value="<?php echo absint( get_option( 'dlmues_default_trial_days', 14 ) ); ?>" min="0" max="365">
+                            <p class="description"><?php esc_html_e( 'Default number of trial days for new trial licenses. Set to 0 to disable trials.', 'dlmues-server' ); ?></p>
+                        </td>
+                    </tr>
                 </table>
 
                 <h2><?php esc_html_e( 'Pricing', 'dlmues-server' ); ?></h2>
@@ -817,6 +824,7 @@ class DLMUES_Admin_Dashboard {
 
         $number_options = array(
             'dlmues_default_grace_period',
+            'dlmues_default_trial_days',
             'dlmues_pricing_monthly',
             'dlmues_pricing_bimonthly',
             'dlmues_pricing_quarterly',

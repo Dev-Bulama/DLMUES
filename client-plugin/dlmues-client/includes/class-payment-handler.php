@@ -64,15 +64,42 @@ class DLMUES_Payment_Handler {
             return $response;
         }
 
-        if ( empty( $response['authorization_url'] ) ) {
+        if ( empty( $response['authorization_url'] ) && empty( $response['access_code'] ) ) {
             return new WP_Error( 'no_auth_url', __( 'Failed to get payment URL from server.', 'dlmues-client' ) );
         }
 
         return array(
-            'authorization_url' => esc_url_raw( $response['authorization_url'] ),
+            'authorization_url' => isset( $response['authorization_url'] ) ? esc_url_raw( $response['authorization_url'] ) : '',
             'reference'         => sanitize_text_field( $response['reference'] ),
             'access_code'       => isset( $response['access_code'] ) ? sanitize_text_field( $response['access_code'] ) : '',
         );
+    }
+
+    /**
+     * Apply a coupon code via the license server.
+     *
+     * @param string $coupon_code The coupon code to apply.
+     * @param string $plan        The plan to apply the coupon to.
+     * @return array|WP_Error Discount data or WP_Error.
+     */
+    public function apply_coupon( $coupon_code, $plan = '' ) {
+        $license_key = get_option( $this->license_client->get_prefix() . 'license_key', '' );
+
+        if ( empty( $license_key ) ) {
+            return new WP_Error( 'no_license', __( 'No license key configured.', 'dlmues-client' ) );
+        }
+
+        $response = $this->license_client->api_request( 'coupon/apply', 'POST', array(
+            'license_key' => $license_key,
+            'coupon_code' => sanitize_text_field( $coupon_code ),
+            'plan'        => sanitize_text_field( $plan ),
+        ) );
+
+        if ( is_wp_error( $response ) ) {
+            return $response;
+        }
+
+        return $response;
     }
 
     /**

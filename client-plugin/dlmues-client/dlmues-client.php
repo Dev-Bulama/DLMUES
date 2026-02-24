@@ -145,6 +145,7 @@ final class DLMUES_Client_Plugin {
         add_action( 'wp_ajax_dlmues_initiate_payment', array( $this, 'ajax_initiate_payment' ) );
         add_action( 'wp_ajax_dlmues_verify_payment', array( $this, 'ajax_verify_payment' ) );
         add_action( 'wp_ajax_dlmues_get_plans', array( $this, 'ajax_get_plans' ) );
+        add_action( 'wp_ajax_dlmues_apply_coupon', array( $this, 'ajax_apply_coupon' ) );
 
         // Track visitor counts for health reporting.
         add_action( 'template_redirect', array( $this->health_reporter, 'track_visitor' ) );
@@ -244,6 +245,27 @@ final class DLMUES_Client_Plugin {
                 'renewalUrl'      => $this->license_client->get_renewal_url(),
                 'enforcementMode' => $this->enforcement->get_enforcement_mode(),
                 'licenseData'     => $this->license_client->get_license_data(),
+            ) );
+
+            // Also load payment modal on ALL admin pages when expired/grace so renewal works everywhere.
+            wp_enqueue_style(
+                'dlmues-payment-modal-style',
+                DLMUES_CLIENT_URL . 'assets/css/payment-modal.css',
+                array(),
+                DLMUES_CLIENT_VERSION
+            );
+            wp_enqueue_script(
+                'dlmues-payment-modal-script',
+                DLMUES_CLIENT_URL . 'assets/js/payment-modal.js',
+                array( 'jquery' ),
+                DLMUES_CLIENT_VERSION,
+                true
+            );
+            wp_localize_script( 'dlmues-payment-modal-script', 'dlmuesPayment', array(
+                'ajaxUrl'     => admin_url( 'admin-ajax.php' ),
+                'nonce'       => wp_create_nonce( 'dlmues_payment_nonce' ),
+                'licenseData' => $this->license_client->get_license_data(),
+                'returnUrl'   => admin_url( 'options-general.php?page=dlmues-license&payment=complete' ),
             ) );
         }
 
@@ -349,6 +371,9 @@ final class DLMUES_Client_Plugin {
         if ( is_wp_error( $result ) ) {
             wp_send_json_error( array( 'message' => $result->get_error_message() ) );
         }
+
+        // Immediately send health report so server has site details right away.
+        $this->health_reporter->send_health_report();
 
         wp_send_json_success( array(
             'message'     => __( 'License activated successfully.', 'dlmues-client' ),
@@ -468,6 +493,32 @@ final class DLMUES_Client_Plugin {
         }
 
         wp_send_json_success( array( 'plans' => $plans ) );
+    }
+
+    /**
+     * AJAX: Apply coupon code via server REST API.
+     */
+    public function ajax_apply_coupon() {
+        check_ajax_referer( 'dlmues_payment_nonce', 'nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => __( 'Unauthorized access.', 'dlmues-client' ) ) );
+        }
+
+        $coupon_code = isset( $_POST['coupon_code'] ) ? sanitize_text_field( wp_unslash( $_POST['coupon_code'] ) ) : '';
+        $plan        = isset( $_POST['plan'] ) ? sanitize_text_field( wp_unslash( $_POST['plan'] ) ) : '';
+
+        if ( empty( $coupon_code ) ) {
+            wp_send_json_error( array( 'message' => __( 'Coupon code is required.', 'dlmues-client' ) ) );
+        }
+
+        $result = $this->payment_handler->apply_coupon( $coupon_code, $plan );
+
+        if ( is_wp_error( $result ) ) {
+            wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+        }
+
+        wp_send_json_success( $result );
     }
 
     /**
