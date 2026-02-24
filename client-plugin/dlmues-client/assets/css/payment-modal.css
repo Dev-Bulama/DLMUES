@@ -1,0 +1,273 @@
+/**
+ * DLMUES Client Plugin - Payment Modal Styles
+ *
+ * @package DLMUES_Client
+ * @since   1.0.0
+ */
+
+/* =============================================
+   PAYMENT MODAL OVERLAY
+   ============================================= */
+
+.dlmues-payment-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 160000;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.dlmues-payment-overlay.active {
+    display: flex;
+}
+
+/* =============================================
+   PAYMENT MODAL BOX
+   ============================================= */
+
+.dlmues-payment-modal {
+    background: #fff;
+    border-radius: 8px;
+    width: 480px;
+    max-width: 95vw;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.dlmues-payment-modal-header {
+    background: #0073aa;
+    color: #fff;
+    padding: 20px 25px;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dlmues-payment-modal-header h3 {
+    margin: 0;
+    font-size: 17px;
+    color: #fff;
+    font-weight: 600;
+}
+
+.dlmues-payment-modal-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.dlmues-payment-modal-close:hover {
+    color: #fff;
+}
+
+/* =============================================
+   PAYMENT MODAL BODY
+   ============================================= */
+
+.dlmues-payment-modal-body {
+    padding: 25px;
+}
+
+.dlmues-payment-summary {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.dlmues-payment-summary table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.dlmues-payment-summary table td {
+    padding: 6px 0;
+    font-size: 13px;
+    color: #333;
+}
+
+.dlmues-payment-summary table td:first-child {
+    font-weight: 600;
+    color: #555;
+    width: 45%;
+}
+
+.dlmues-payment-total {
+    border-top: 2px solid #dee2e6;
+    padding-top: 10px;
+    margin-top: 10px;
+}
+
+.dlmues-payment-total td {
+    font-size: 16px !important;
+    font-weight: 700 !important;
+}
+
+.dlmues-payment-total td:last-child {
+    color: #0073aa;
+}
+
+/* =============================================
+   PLAN SELECTOR IN MODAL
+   ============================================= */
+
+.dlmues-modal-plans {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.dlmues-modal-plan {
+    border: 2px solid #e0e0e0;
+    border-radius: 5px;
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: #fff;
+}
+
+.dlmues-modal-plan:hover {
+    border-color: #0073aa;
+}
+
+.dlmues-modal-plan.selected {
+    border-color: #0073aa;
+    background: #f0f8ff;
+}
+
+.dlmues-modal-plan .modal-plan-name {
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: #555;
+    margin-bottom: 4px;
+}
+
+.dlmues-modal-plan .modal-plan-price {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0073aa;
+}
+
+/* =============================================
+   COUPON SECTION IN MODAL
+   ============================================= */
+
+.dlmues-modal-coupon {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.dlmues-modal-coupon input {
+    flex: 1;
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.dlmues-modal-coupon button {
+    padding: 6px 14px;
+    background: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.dlmues-modal-coupon button:hover {
+    background: #e0e0e0;
+}
+
+.dlmues-modal-coupon-msg {
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.dlmues-modal-coupon-msg.success { color: #46b450; }
+.dlmues-modal-coupon-msg.error   { color: #dc3232; }
+
+/* =============================================
+   PAY BUTTON
+   ============================================= */
+
+.dlmues-pay-btn {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    background: #46b450;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.2s;
+}
+
+.dlmues-pay-btn:hover {
+    background: #3a9a42;
+}
+
+.dlmues-pay-btn:disabled {
+    background: #999;
+    cursor: not-allowed;
+}
+
+.dlmues-pay-btn .dlmues-spinner {
+    border-top-color: #fff;
+    border-color: rgba(255,255,255,0.3);
+    border-top-color: #fff;
+}
+
+/* =============================================
+   PAYMENT STATUS MESSAGES
+   ============================================= */
+
+.dlmues-payment-status {
+    text-align: center;
+    padding: 30px 20px;
+}
+
+.dlmues-payment-status .dashicons {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    margin-bottom: 15px;
+}
+
+.dlmues-payment-status.success .dashicons {
+    color: #46b450;
+}
+
+.dlmues-payment-status.error .dashicons {
+    color: #dc3232;
+}
+
+.dlmues-payment-status h4 {
+    margin: 10px 0 5px;
+    font-size: 18px;
+}
+
+.dlmues-payment-status p {
+    color: #666;
+    font-size: 14px;
+}
