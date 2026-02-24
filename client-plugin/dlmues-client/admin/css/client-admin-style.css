@@ -1,0 +1,294 @@
+/**
+ * DLMUES Client Plugin - Admin Styles
+ *
+ * @package DLMUES_Client
+ * @since   1.0.0
+ */
+
+/* =============================================
+   LICENSE SETTINGS PAGE
+   ============================================= */
+
+.dlmues-settings-wrap {
+    max-width: 800px;
+}
+
+.dlmues-settings-wrap h1 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* =============================================
+   LICENSE STATUS CARD
+   ============================================= */
+
+.dlmues-license-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 25px;
+    margin: 20px 0;
+    border-left: 4px solid #0073aa;
+}
+
+.dlmues-license-card.status-active {
+    border-left-color: #46b450;
+}
+
+.dlmues-license-card.status-expired {
+    border-left-color: #dc3232;
+}
+
+.dlmues-license-card.status-suspended {
+    border-left-color: #dc3232;
+}
+
+.dlmues-license-card.status-trial {
+    border-left-color: #826eb4;
+}
+
+.dlmues-license-card.status-grace {
+    border-left-color: #ffba00;
+}
+
+.dlmues-license-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.dlmues-license-header h2 {
+    margin: 0;
+    font-size: 18px;
+}
+
+/* =============================================
+   STATUS BADGES
+   ============================================= */
+
+.dlmues-status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.dlmues-status-badge.active    { background: #d4edda; color: #155724; }
+.dlmues-status-badge.expired   { background: #f8d7da; color: #721c24; }
+.dlmues-status-badge.suspended { background: #e2e3e5; color: #383d41; }
+.dlmues-status-badge.trial     { background: #d0d3ff; color: #2d2f8f; }
+.dlmues-status-badge.grace     { background: #fff3cd; color: #856404; }
+.dlmues-status-badge.inactive  { background: #e2e3e5; color: #666; }
+
+/* =============================================
+   LICENSE DETAIL TABLE
+   ============================================= */
+
+.dlmues-detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+}
+
+.dlmues-detail-table th,
+.dlmues-detail-table td {
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 13px;
+    border-bottom: 1px solid #eee;
+}
+
+.dlmues-detail-table th {
+    width: 180px;
+    font-weight: 600;
+    color: #555;
+    white-space: nowrap;
+}
+
+.dlmues-detail-table code {
+    font-size: 12px;
+    background: #f0f0f0;
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+/* =============================================
+   ACTION BUTTONS
+   ============================================= */
+
+.dlmues-actions-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 15px;
+    flex-wrap: wrap;
+}
+
+.dlmues-actions-row .button {
+    min-width: 100px;
+}
+
+/* =============================================
+   ACTIVATION FORM
+   ============================================= */
+
+.dlmues-activation-form {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 25px;
+    margin: 20px 0;
+}
+
+.dlmues-activation-form h2 {
+    margin-top: 0;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #eee;
+}
+
+.dlmues-activation-form .form-table th {
+    width: 160px;
+}
+
+/* =============================================
+   RENEWAL SECTION
+   ============================================= */
+
+.dlmues-renewal-section {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 25px;
+    margin: 20px 0;
+    border-left: 4px solid #0073aa;
+}
+
+.dlmues-renewal-section h3 {
+    margin-top: 0;
+}
+
+.dlmues-plan-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.dlmues-plan-option {
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    padding: 15px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #fff;
+}
+
+.dlmues-plan-option:hover,
+.dlmues-plan-option.selected {
+    border-color: #0073aa;
+    background: #f0f8ff;
+}
+
+.dlmues-plan-option .plan-name {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 5px;
+    text-transform: capitalize;
+}
+
+.dlmues-plan-option .plan-price {
+    font-size: 20px;
+    font-weight: 700;
+    color: #0073aa;
+    margin-bottom: 3px;
+}
+
+.dlmues-plan-option .plan-cycle {
+    font-size: 11px;
+    color: #666;
+}
+
+/* =============================================
+   COUPON INPUT
+   ============================================= */
+
+.dlmues-coupon-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin: 10px 0;
+}
+
+.dlmues-coupon-row input {
+    width: 200px;
+}
+
+.dlmues-coupon-result {
+    font-size: 13px;
+    margin-left: 8px;
+}
+
+.dlmues-coupon-result.success { color: #46b450; }
+.dlmues-coupon-result.error   { color: #dc3232; }
+
+/* =============================================
+   NOTICES
+   ============================================= */
+
+.dlmues-inline-notice {
+    padding: 10px 15px;
+    border-radius: 4px;
+    margin: 10px 0;
+    font-size: 13px;
+}
+
+.dlmues-inline-notice.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+.dlmues-inline-notice.error   { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+.dlmues-inline-notice.warning { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+.dlmues-inline-notice.info    { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+
+/* =============================================
+   LOADING SPINNER
+   ============================================= */
+
+.dlmues-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid #f0f0f0;
+    border-top-color: #0073aa;
+    border-radius: 50%;
+    animation: dlmues-spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 5px;
+}
+
+@keyframes dlmues-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* =============================================
+   RESPONSIVE
+   ============================================= */
+
+@media (max-width: 782px) {
+    .dlmues-license-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .dlmues-plan-options {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .dlmues-detail-table th {
+        width: 120px;
+    }
+}

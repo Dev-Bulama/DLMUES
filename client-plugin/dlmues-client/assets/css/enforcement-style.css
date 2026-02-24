@@ -1,0 +1,304 @@
+/**
+ * DLMUES Client Plugin - Enforcement Styles
+ *
+ * Styles for the enforcement overlay, grace period bar,
+ * and expiry countdown timer.
+ *
+ * @package DLMUES_Client
+ * @since   1.0.0
+ */
+
+/* =============================================
+   ENFORCEMENT MODAL OVERLAY
+   ============================================= */
+
+#dlmues-enforcement-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.dlmues-enforcement-card {
+    background: #fff;
+    max-width: 520px;
+    width: 92%;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+    animation: dlmues-modal-appear 0.3s ease-out;
+}
+
+@keyframes dlmues-modal-appear {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.dlmues-enforcement-header {
+    background: linear-gradient(135deg, #dc3232 0%, #b71c1c 100%);
+    color: #fff;
+    padding: 30px;
+    text-align: center;
+}
+
+.dlmues-enforcement-header .dlmues-icon {
+    font-size: 52px;
+    margin-bottom: 12px;
+    display: block;
+}
+
+.dlmues-enforcement-header h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.dlmues-enforcement-body {
+    padding: 30px;
+}
+
+.dlmues-enforcement-body p {
+    font-size: 15px;
+    line-height: 1.65;
+    color: #444;
+    margin-top: 0;
+}
+
+/* =============================================
+   LICENSE INFO BOX
+   ============================================= */
+
+.dlmues-enforcement-info {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 12px 15px;
+    margin: 15px 0;
+}
+
+.dlmues-enforcement-info table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.dlmues-enforcement-info table td {
+    padding: 5px 0;
+    font-size: 13px;
+}
+
+.dlmues-enforcement-info table td:first-child {
+    font-weight: 600;
+    color: #666;
+    width: 45%;
+}
+
+/* =============================================
+   RENEW BUTTON
+   ============================================= */
+
+.dlmues-enforcement-actions {
+    text-align: center;
+    margin-top: 25px;
+}
+
+.dlmues-enforce-renew-btn {
+    display: inline-block;
+    padding: 14px 35px;
+    background: linear-gradient(135deg, #0073aa 0%, #005177 100%);
+    color: #fff;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 600;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 4px 15px rgba(0, 115, 170, 0.35);
+}
+
+.dlmues-enforce-renew-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(0, 115, 170, 0.45);
+    color: #fff;
+}
+
+.dlmues-enforcement-hint {
+    font-size: 12px;
+    color: #999;
+    margin-top: 15px;
+    text-align: center;
+}
+
+/* =============================================
+   GRACE PERIOD TOP BAR
+   ============================================= */
+
+#dlmues-grace-bar {
+    position: fixed;
+    top: 32px; /* Below WP admin bar */
+    left: 0;
+    right: 0;
+    z-index: 99998;
+    background: linear-gradient(90deg, #f39c12 0%, #e67e22 100%);
+    color: #fff;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+#dlmues-grace-bar .dlmues-grace-text {
+    flex: 1;
+}
+
+#dlmues-grace-bar .dlmues-grace-text strong {
+    font-weight: 700;
+}
+
+#dlmues-grace-bar .dlmues-grace-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+#dlmues-grace-bar .dlmues-grace-renew {
+    background: #fff;
+    color: #e67e22;
+    padding: 5px 15px;
+    border-radius: 3px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 12px;
+    transition: background 0.15s;
+}
+
+#dlmues-grace-bar .dlmues-grace-renew:hover {
+    background: #f0f0f0;
+}
+
+#dlmues-grace-bar .dlmues-grace-dismiss {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.7);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0 4px;
+}
+
+#dlmues-grace-bar .dlmues-grace-dismiss:hover {
+    color: #fff;
+}
+
+/* Push admin content down when grace bar is showing */
+body.dlmues-grace-active #wpcontent {
+    padding-top: 45px;
+}
+
+/* =============================================
+   COUNTDOWN TIMER
+   ============================================= */
+
+.dlmues-countdown {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.dlmues-countdown-segment {
+    background: rgba(255,255,255,0.2);
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: 12px;
+    font-weight: 700;
+    min-width: 28px;
+    text-align: center;
+}
+
+.dlmues-countdown-separator {
+    font-weight: 700;
+    opacity: 0.6;
+}
+
+/* =============================================
+   MAINTENANCE PAGE STYLES (frontend)
+   ============================================= */
+
+.dlmues-maintenance-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    padding: 20px;
+}
+
+.dlmues-maintenance-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 50px 40px;
+    max-width: 500px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.2);
+}
+
+.dlmues-maintenance-icon {
+    font-size: 64px;
+    margin-bottom: 20px;
+    display: block;
+}
+
+.dlmues-maintenance-card h1 {
+    margin: 0 0 15px;
+    font-size: 28px;
+    color: #333;
+    font-weight: 700;
+}
+
+.dlmues-maintenance-card p {
+    color: #666;
+    font-size: 16px;
+    line-height: 1.6;
+    margin: 0 0 10px;
+}
+
+/* =============================================
+   RESPONSIVE
+   ============================================= */
+
+@media (max-width: 782px) {
+    #dlmues-grace-bar {
+        top: 46px; /* Mobile admin bar height */
+        flex-direction: column;
+        text-align: center;
+        gap: 8px;
+    }
+
+    .dlmues-enforcement-card {
+        width: 96%;
+    }
+
+    .dlmues-enforcement-header {
+        padding: 20px;
+    }
+
+    .dlmues-enforcement-body {
+        padding: 20px;
+    }
+}

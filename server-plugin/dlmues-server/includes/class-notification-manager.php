@@ -282,6 +282,28 @@ class DLMUES_Notification_Manager {
         <?php
 
         switch ( $template ) {
+            case 'welcome':
+                $security_obj = new DLMUES_Security();
+                ?>
+                <h3><?php esc_html_e( 'Welcome!', 'dlmues-server' ); ?></h3>
+                <p>
+                    <?php
+                    printf(
+                        /* translators: %s: product name */
+                        esc_html__( 'Your license for %s has been created. Below are your license details.', 'dlmues-server' ),
+                        '<strong>' . esc_html( $data['product_name'] ) . '</strong>'
+                    );
+                    ?>
+                </p>
+                <table class="info-table">
+                    <tr><td><?php esc_html_e( 'License Key', 'dlmues-server' ); ?></td><td><code><?php echo esc_html( $license['license_key'] ); ?></code></td></tr>
+                    <tr><td><?php esc_html_e( 'Plan', 'dlmues-server' ); ?></td><td><?php echo esc_html( ucfirst( $license['subscription_type'] ) ); ?></td></tr>
+                    <tr><td><?php esc_html_e( 'Expires', 'dlmues-server' ); ?></td><td><?php echo esc_html( $license['expires_at'] ); ?></td></tr>
+                </table>
+                <p><?php esc_html_e( 'Please keep this license key safe. You will need it to activate the product on your website.', 'dlmues-server' ); ?></p>
+                <?php
+                break;
+
             case 'expiry_warning':
                 ?>
                 <h3><?php esc_html_e( 'License Expiring Soon', 'dlmues-server' ); ?></h3>
@@ -385,6 +407,69 @@ class DLMUES_Notification_Manager {
             }
         }
         return $license['product_slug'] ? $license['product_slug'] : __( 'Licensed Product', 'dlmues-server' );
+    }
+
+    /**
+     * Send a welcome email with the license key.
+     *
+     * @param array $license The license data array.
+     * @return bool True if sent successfully.
+     */
+    public function send_welcome_email( $license ) {
+        if ( empty( $license['client_email'] ) ) {
+            return false;
+        }
+
+        $security   = new DLMUES_Security();
+        $masked_key = $security->mask_license_key( $license['license_key'] );
+        $site_name  = get_bloginfo( 'name' );
+
+        $subject = sprintf(
+            /* translators: %s: product name or slug */
+            __( 'Welcome! Your license for %s', 'dlmues-server' ),
+            $this->get_product_name( $license )
+        );
+
+        $message = $this->build_email_body( 'welcome', array(
+            'license'      => $license,
+            'product_name' => $this->get_product_name( $license ),
+        ) );
+
+        $headers = array( 'Content-Type: text/html; charset=UTF-8' );
+
+        return wp_mail( $license['client_email'], $subject, $message, $headers );
+    }
+
+    /**
+     * Send a renewal reminder email for a specific license.
+     *
+     * @param array $license The license data array.
+     * @return bool True if sent successfully.
+     */
+    public function send_renewal_reminder( $license ) {
+        if ( empty( $license['client_email'] ) ) {
+            return false;
+        }
+
+        $renewal_url    = $this->get_renewal_url( $license );
+        $days_remaining = max( 0, ceil( ( strtotime( $license['expires_at'] ) - time() ) / DAY_IN_SECONDS ) );
+
+        $subject = sprintf(
+            /* translators: %s: product name or slug */
+            __( 'Renewal Reminder - %s License', 'dlmues-server' ),
+            $this->get_product_name( $license )
+        );
+
+        $message = $this->build_email_body( 'expiry_warning', array(
+            'license'        => $license,
+            'days_remaining' => $days_remaining,
+            'renewal_url'    => $renewal_url,
+            'product_name'   => $this->get_product_name( $license ),
+        ) );
+
+        $headers = array( 'Content-Type: text/html; charset=UTF-8' );
+
+        return wp_mail( $license['client_email'], $subject, $message, $headers );
     }
 
     /**
