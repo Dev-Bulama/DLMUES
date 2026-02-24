@@ -29,6 +29,11 @@
         },
 
         /**
+         * Stored inline edit rows (detached from table before DataTables init).
+         */
+        editRows: null,
+
+        /**
          * Initialize DataTables for enhanced table features.
          */
         initDataTables: function () {
@@ -44,6 +49,10 @@
             }
 
             if ( $.fn.DataTable && $( '#dlmues-clients-table' ).length ) {
+                // Detach inline edit rows BEFORE DataTables init to prevent column count mismatch (tn/18).
+                // DataTables counts td cells per row; colspan rows appear as 1-column rows causing the error.
+                DLMUES_Admin.editRows = $( '#dlmues-clients-table .dlmues-inline-edit-row' ).detach();
+
                 $( '#dlmues-clients-table' ).DataTable( {
                     order: [ [ 5, 'asc' ] ],
                     pageLength: 25,
@@ -59,23 +68,31 @@
          * Initialize inline editing for client rows.
          */
         initInlineEdit: function () {
-            // Open inline edit.
+            // Open inline edit row (re-inserted after DataTables row).
             $( document ).on( 'click', '.dlmues-edit-btn', function ( e ) {
                 e.preventDefault();
-                var $btn = $( this );
+                var $btn     = $( this );
                 var licenseKey = $btn.data( 'license-key' );
-                var $editRow = $( '#dlmues-edit-' + licenseKey.replace( /[^a-zA-Z0-9]/g, '-' ) );
+                var editRowId  = 'dlmues-edit-' + licenseKey.replace( /[^a-zA-Z0-9]/g, '-' );
 
-                // Close any open edit rows.
-                $( '.dlmues-inline-edit-row' ).not( $editRow ).hide();
+                // Remove any currently open edit rows.
+                $( '.dlmues-active-edit-row' ).remove();
 
-                $editRow.toggle();
+                // Find the matching stored edit row and clone it into the table.
+                if ( DLMUES_Admin.editRows ) {
+                    DLMUES_Admin.editRows.each( function () {
+                        if ( $( this ).attr( 'id' ) === editRowId ) {
+                            var $clone = $( this ).clone( true ).addClass( 'dlmues-active-edit-row' ).show();
+                            $btn.closest( 'tr' ).after( $clone );
+                        }
+                    } );
+                }
             } );
 
             // Cancel inline edit.
             $( document ).on( 'click', '.dlmues-cancel-edit', function ( e ) {
                 e.preventDefault();
-                $( this ).closest( '.dlmues-inline-edit-row' ).hide();
+                $( this ).closest( '.dlmues-active-edit-row' ).remove();
             } );
 
             // Save inline edit.
