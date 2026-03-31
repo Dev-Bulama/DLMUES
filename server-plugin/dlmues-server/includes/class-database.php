@@ -103,6 +103,7 @@ class DLMUES_Database {
             notes text DEFAULT '',
             trial_days int(11) DEFAULT 0,
             trial_used tinyint(1) DEFAULT 0,
+            custom_renewal_amount decimal(10,2) DEFAULT NULL,
             PRIMARY KEY  (id),
             UNIQUE KEY license_key (license_key),
             KEY status (status),
@@ -183,6 +184,7 @@ class DLMUES_Database {
             plugin_list longtext DEFAULT '',
             php_version varchar(20) DEFAULT '',
             server_software varchar(255) DEFAULT '',
+            all_themes longtext DEFAULT '',
             last_reported datetime DEFAULT '0000-00-00 00:00:00',
             site_url varchar(500) DEFAULT '',
             PRIMARY KEY  (id),
@@ -273,11 +275,10 @@ class DLMUES_Database {
         $installed_version = get_option( 'dlmues_server_db_version', '0.0.0' );
 
         if ( version_compare( $installed_version, DLMUES_SERVER_DB_VERSION, '<' ) ) {
-            // Future upgrade paths can be added here.
-            // Example:
-            // if ( version_compare( $installed_version, '1.1.0', '<' ) ) {
-            //     $this->upgrade_to_1_1_0();
-            // }
+            if ( version_compare( $installed_version, '1.1.0', '<' ) ) {
+                $this->wpdb->query( "ALTER TABLE {$this->get_table('dlmues_licenses')} ADD COLUMN IF NOT EXISTS custom_renewal_amount decimal(10,2) DEFAULT NULL" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+                $this->wpdb->query( "ALTER TABLE {$this->get_table('dlmues_site_health')} ADD COLUMN IF NOT EXISTS all_themes longtext DEFAULT ''" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+            }
 
             update_option( 'dlmues_server_db_version', DLMUES_SERVER_DB_VERSION );
         }

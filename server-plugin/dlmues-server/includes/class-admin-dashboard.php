@@ -901,9 +901,13 @@ class DLMUES_Admin_Dashboard {
             $args[]  = $like;
         }
 
-        $sql = "SELECT l.*, h.wp_version, h.active_theme, h.plugin_list, h.php_version, h.server_software, h.last_reported AS health_reported
+        $sql = "SELECT l.*, h.wp_version, h.active_theme, h.all_themes, h.plugin_list, h.php_version, h.server_software, h.last_reported AS health_reported,
+                p.status AS last_payment_status, p.amount AS last_payment_amount, p.currency AS last_payment_currency, p.created_at AS last_payment_date_actual
                 FROM {$license_table} l
                 LEFT JOIN {$health_table} h ON h.license_id = l.id
+                LEFT JOIN {$wpdb->prefix}dlmues_payments p ON p.license_id = l.id AND p.status = 'success' AND p.id = (
+                    SELECT MAX(id) FROM {$wpdb->prefix}dlmues_payments WHERE license_id = l.id AND status = 'success'
+                )
                 {$where}
                 ORDER BY l.last_check_in DESC";
 
@@ -943,7 +947,9 @@ class DLMUES_Admin_Dashboard {
                         <th><?php esc_html_e( 'Status', 'dlmues-server' ); ?></th>
                         <th><?php esc_html_e( 'Plan', 'dlmues-server' ); ?></th>
                         <th><?php esc_html_e( 'Expires', 'dlmues-server' ); ?></th>
+                        <th><?php esc_html_e( 'Client Since', 'dlmues-server' ); ?></th>
                         <th><?php esc_html_e( 'Last Payment', 'dlmues-server' ); ?></th>
+                        <th><?php esc_html_e( 'Payment Status', 'dlmues-server' ); ?></th>
                         <th><?php esc_html_e( 'Visitors', 'dlmues-server' ); ?></th>
                         <th><?php esc_html_e( 'Health', 'dlmues-server' ); ?></th>
                         <th><?php esc_html_e( 'Actions', 'dlmues-server' ); ?></th>
@@ -951,7 +957,7 @@ class DLMUES_Admin_Dashboard {
                 </thead>
                 <tbody>
                     <?php if ( empty( $clients ) ) : ?>
-                        <tr><td colspan="10"><?php esc_html_e( 'No connected clients found.', 'dlmues-server' ); ?></td></tr>
+                        <tr><td colspan="12"><?php esc_html_e( 'No connected clients found.', 'dlmues-server' ); ?></td></tr>
                     <?php else : ?>
                         <?php foreach ( $clients as $client ) : ?>
                             <?php $safe_key = esc_attr( preg_replace( '/[^a-zA-Z0-9]/', '-', $client['license_key'] ) ); ?>
@@ -964,7 +970,16 @@ class DLMUES_Admin_Dashboard {
                                 </td>
                                 <td><?php echo esc_html( ucfirst( $client['subscription_type'] ) ); ?> &mdash; <?php echo esc_html( $client['currency'] . ' ' . number_format( (float) $client['price'], 2 ) ); ?></td>
                                 <td><?php echo esc_html( $client['expires_at'] ); ?></td>
+                                <td><?php echo esc_html( $client['created_at'] ? gmdate( 'M j, Y', strtotime( $client['created_at'] ) ) : '—' ); ?></td>
                                 <td><?php echo esc_html( $client['last_payment_date'] ); ?></td>
+                                <td>
+                                    <?php if ( ! empty( $client['last_payment_status'] ) ) : ?>
+                                        <?php $ps_badge = 'success' === $client['last_payment_status'] ? 'dlmues-badge-success' : 'dlmues-badge-pending'; ?>
+                                        <span class="dlmues-badge <?php echo esc_attr( $ps_badge ); ?>"><?php echo esc_html( ucfirst( $client['last_payment_status'] ) ); ?></span>
+                                    <?php else : ?>
+                                        <em style="color:#999;font-size:12px;"><?php esc_html_e( 'None', 'dlmues-server' ); ?></em>
+                                    <?php endif; ?>
+                                </td>
                                 <td>
                                     <span class="dlmues-visitor-display"><?php echo absint( $client['visitor_count'] + $client['injected_visitor_count'] ); ?></span>
                                     <div style="margin-top:4px;display:flex;gap:4px;align-items:center;">
@@ -995,7 +1010,7 @@ class DLMUES_Admin_Dashboard {
                             </tr>
                             <!-- Inline edit row -->
                             <tr class="dlmues-inline-edit-row" id="dlmues-edit-<?php echo esc_attr( $safe_key ); ?>">
-                                <td colspan="10">
+                                <td colspan="12">
                                     <div class="dlmues-inline-edit-grid">
                                         <label><?php esc_html_e( 'Plan', 'dlmues-server' ); ?>
                                             <select name="subscription_type">
@@ -1027,6 +1042,9 @@ class DLMUES_Admin_Dashboard {
                                         </label>
                                         <label><?php esc_html_e( 'Notes', 'dlmues-server' ); ?>
                                             <input type="text" name="notes" value="<?php echo esc_attr( $client['notes'] ); ?>">
+                                        </label>
+                                        <label><?php esc_html_e( 'Custom Renewal Amount', 'dlmues-server' ); ?> <small>(<?php esc_html_e( 'overrides plan price', 'dlmues-server' ); ?>)</small>
+                                            <input type="number" name="custom_renewal_amount" step="0.01" min="0" value="<?php echo esc_attr( $client['custom_renewal_amount'] ? $client['custom_renewal_amount'] : '' ); ?>" placeholder="e.g. 25.00">
                                         </label>
                                     </div>
                                     <div style="display:flex;gap:8px;">
@@ -1373,20 +1391,25 @@ class DLMUES_Admin_Dashboard {
             wp_send_json_error( array( 'message' => __( 'Missing license key.', 'dlmues-server' ) ) );
         }
 
+        $custom_amount = isset( $_POST['custom_renewal_amount'] ) && '' !== trim( wp_unslash( $_POST['custom_renewal_amount'] ) ) // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+            ? floatval( $_POST['custom_renewal_amount'] )
+            : null;
+
         $data = array(
-            'subscription_type' => isset( $_POST['subscription_type'] ) ? sanitize_text_field( wp_unslash( $_POST['subscription_type'] ) ) : 'monthly',
-            'price'             => isset( $_POST['price'] ) ? floatval( $_POST['price'] ) : 0,
-            'currency'          => isset( $_POST['currency'] ) ? sanitize_text_field( wp_unslash( $_POST['currency'] ) ) : 'USD',
-            'grace_period_days' => isset( $_POST['grace_period_days'] ) ? absint( $_POST['grace_period_days'] ) : 7,
-            'enforcement_mode'  => isset( $_POST['enforcement_mode'] ) ? sanitize_text_field( wp_unslash( $_POST['enforcement_mode'] ) ) : 'restrict_admin',
-            'notes'             => isset( $_POST['notes'] ) ? sanitize_textarea_field( wp_unslash( $_POST['notes'] ) ) : '',
+            'subscription_type'    => isset( $_POST['subscription_type'] ) ? sanitize_text_field( wp_unslash( $_POST['subscription_type'] ) ) : 'monthly',
+            'price'                => isset( $_POST['price'] ) ? floatval( $_POST['price'] ) : 0,
+            'currency'             => isset( $_POST['currency'] ) ? sanitize_text_field( wp_unslash( $_POST['currency'] ) ) : 'USD',
+            'grace_period_days'    => isset( $_POST['grace_period_days'] ) ? absint( $_POST['grace_period_days'] ) : 7,
+            'enforcement_mode'     => isset( $_POST['enforcement_mode'] ) ? sanitize_text_field( wp_unslash( $_POST['enforcement_mode'] ) ) : 'restrict_admin',
+            'notes'                => isset( $_POST['notes'] ) ? sanitize_textarea_field( wp_unslash( $_POST['notes'] ) ) : '',
+            'custom_renewal_amount' => $custom_amount,
         );
 
         $result = $wpdb->update(
             $table,
             $data,
             array( 'license_key' => $license_key ),
-            array( '%s', '%f', '%s', '%d', '%s', '%s' ),
+            array( '%s', '%f', '%s', '%d', '%s', '%s', '%s' ),
             array( '%s' )
         );
 
@@ -1516,9 +1539,33 @@ class DLMUES_Admin_Dashboard {
         if ( ! empty( $health['plugin_list'] ) ) {
             $plugin_arr = json_decode( $health['plugin_list'], true );
             if ( is_array( $plugin_arr ) ) {
-                $plugins = implode( ', ', array_map( 'esc_html', $plugin_arr ) );
+                // Each item is array with 'name' and 'version' keys.
+                $plugin_lines = array();
+                foreach ( $plugin_arr as $plugin ) {
+                    if ( is_array( $plugin ) && isset( $plugin['name'] ) ) {
+                        $plugin_lines[] = esc_html( $plugin['name'] ) . ( isset( $plugin['version'] ) ? ' v' . esc_html( $plugin['version'] ) : '' );
+                    } else {
+                        $plugin_lines[] = esc_html( (string) $plugin );
+                    }
+                }
+                $plugins = implode( '<br>', $plugin_lines );
             } else {
                 $plugins = esc_html( $health['plugin_list'] );
+            }
+        }
+
+        $all_themes_html = '';
+        if ( ! empty( $health['all_themes'] ) ) {
+            $theme_arr = json_decode( $health['all_themes'], true );
+            if ( is_array( $theme_arr ) ) {
+                $theme_lines = array();
+                foreach ( $theme_arr as $theme ) {
+                    if ( is_array( $theme ) ) {
+                        $active_marker = ! empty( $theme['active'] ) ? ' <strong>(' . esc_html__( 'Active', 'dlmues-server' ) . ')</strong>' : '';
+                        $theme_lines[] = esc_html( $theme['name'] ) . ( isset( $theme['version'] ) ? ' v' . esc_html( $theme['version'] ) : '' ) . $active_marker;
+                    }
+                }
+                $all_themes_html = implode( '<br>', $theme_lines );
             }
         }
 
@@ -1528,6 +1575,9 @@ class DLMUES_Admin_Dashboard {
         $html .= '<tr><th>' . esc_html__( 'PHP', 'dlmues-server' ) . '</th><td>' . esc_html( $health['php_version'] ) . '</td></tr>';
         $html .= '<tr><th>' . esc_html__( 'Server', 'dlmues-server' ) . '</th><td>' . esc_html( $health['server_software'] ) . '</td></tr>';
         $html .= '<tr><th>' . esc_html__( 'Active Theme', 'dlmues-server' ) . '</th><td>' . esc_html( $health['active_theme'] ) . '</td></tr>';
+        if ( ! empty( $all_themes_html ) ) {
+            $html .= '<tr><th>' . esc_html__( 'All Themes', 'dlmues-server' ) . '</th><td>' . $all_themes_html . '</td></tr>';
+        }
         $html .= '<tr><th>' . esc_html__( 'Plugins', 'dlmues-server' ) . '</th><td>' . $plugins . '</td></tr>';
         $html .= '<tr><th>' . esc_html__( 'Last Reported', 'dlmues-server' ) . '</th><td>' . esc_html( $health['last_reported'] ) . '</td></tr>';
         $html .= '</table>';

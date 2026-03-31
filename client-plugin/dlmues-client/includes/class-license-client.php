@@ -130,6 +130,17 @@ class DLMUES_License_Client {
             update_option( $this->prefix . 'managed_products', array_map( 'sanitize_text_field', $response['managed_products'] ) );
         }
 
+        // Store injected visitor count, custom renewal amount, and client since date.
+        if ( isset( $response['injected_visitor_count'] ) ) {
+            update_option( $this->prefix . 'injected_visitor_count', absint( $response['injected_visitor_count'] ) );
+        }
+        if ( isset( $response['custom_renewal_amount'] ) && ! is_null( $response['custom_renewal_amount'] ) ) {
+            update_option( $this->prefix . 'custom_renewal_amount', floatval( $response['custom_renewal_amount'] ) );
+        }
+        if ( isset( $response['created_at'] ) ) {
+            update_option( $this->prefix . 'created_at', sanitize_text_field( $response['created_at'] ) );
+        }
+
         // Cache the valid status.
         set_transient( $this->cache_key, 'valid', $this->cache_duration );
 
@@ -197,6 +208,17 @@ class DLMUES_License_Client {
             update_option( $this->prefix . 'managed_products', array_map( 'sanitize_text_field', $response['managed_products'] ) );
         }
 
+        // Store injected visitor count, custom renewal amount, and client since date.
+        if ( isset( $response['injected_visitor_count'] ) ) {
+            update_option( $this->prefix . 'injected_visitor_count', absint( $response['injected_visitor_count'] ) );
+        }
+        if ( array_key_exists( 'custom_renewal_amount', $response ) ) {
+            update_option( $this->prefix . 'custom_renewal_amount', ! is_null( $response['custom_renewal_amount'] ) ? floatval( $response['custom_renewal_amount'] ) : 0 );
+        }
+        if ( isset( $response['created_at'] ) ) {
+            update_option( $this->prefix . 'created_at', sanitize_text_field( $response['created_at'] ) );
+        }
+
         update_option( $this->prefix . 'last_validated', current_time( 'mysql' ) );
 
         // Cache the status.
@@ -245,27 +267,30 @@ class DLMUES_License_Client {
      */
     public function get_license_data() {
         return array(
-            'license_key'       => get_option( $this->prefix . 'license_key', '' ),
-            'server_url'        => get_option( $this->prefix . 'server_url', '' ),
-            'api_token'         => get_option( $this->prefix . 'api_token', '' ),
-            'domain'            => get_option( $this->prefix . 'domain', '' ),
-            'status'            => get_option( $this->prefix . 'status', 'inactive' ),
-            'expires_at'        => get_option( $this->prefix . 'expires_at', '' ),
-            'subscription_type' => get_option( $this->prefix . 'subscription_type', '' ),
-            'enforcement_mode'  => get_option( $this->prefix . 'enforcement_mode', 'restrict_admin' ),
-            'grace_period_days' => get_option( $this->prefix . 'grace_period_days', 7 ),
-            'last_validated'    => get_option( $this->prefix . 'last_validated', '' ),
-            'product_slug'      => get_option( $this->prefix . 'product_slug', '' ),
-            'product_name'      => get_option( $this->prefix . 'product_name', '' ),
-            'client_email'      => get_option( $this->prefix . 'client_email', '' ),
-            'currency'          => get_option( $this->prefix . 'currency', 'USD' ),
-            'price'             => get_option( $this->prefix . 'price', 0 ),
-            'renewal_url'       => get_option( $this->prefix . 'renewal_url', '' ),
-            'managed_products'  => get_option( $this->prefix . 'managed_products', array() ),
-            'time_remaining'    => $this->get_time_remaining(),
-            'is_valid'          => $this->is_license_valid(),
-            'is_grace_period'   => $this->is_in_grace_period(),
-            'is_expired'        => $this->is_expired(),
+            'license_key'            => get_option( $this->prefix . 'license_key', '' ),
+            'server_url'             => get_option( $this->prefix . 'server_url', '' ),
+            'api_token'              => get_option( $this->prefix . 'api_token', '' ),
+            'domain'                 => get_option( $this->prefix . 'domain', '' ),
+            'status'                 => get_option( $this->prefix . 'status', 'inactive' ),
+            'expires_at'             => get_option( $this->prefix . 'expires_at', '' ),
+            'subscription_type'      => get_option( $this->prefix . 'subscription_type', '' ),
+            'enforcement_mode'       => get_option( $this->prefix . 'enforcement_mode', 'restrict_admin' ),
+            'grace_period_days'      => get_option( $this->prefix . 'grace_period_days', 7 ),
+            'last_validated'         => get_option( $this->prefix . 'last_validated', '' ),
+            'product_slug'           => get_option( $this->prefix . 'product_slug', '' ),
+            'product_name'           => get_option( $this->prefix . 'product_name', '' ),
+            'client_email'           => get_option( $this->prefix . 'client_email', '' ),
+            'currency'               => get_option( $this->prefix . 'currency', 'USD' ),
+            'price'                  => get_option( $this->prefix . 'price', 0 ),
+            'renewal_url'            => get_option( $this->prefix . 'renewal_url', '' ),
+            'managed_products'       => get_option( $this->prefix . 'managed_products', array() ),
+            'injected_visitor_count' => absint( get_option( $this->prefix . 'injected_visitor_count', 0 ) ),
+            'custom_renewal_amount'  => floatval( get_option( $this->prefix . 'custom_renewal_amount', 0 ) ),
+            'created_at'             => get_option( $this->prefix . 'created_at', '' ),
+            'time_remaining'         => $this->get_time_remaining(),
+            'is_valid'               => $this->is_license_valid(),
+            'is_grace_period'        => $this->is_in_grace_period(),
+            'is_expired'             => $this->is_expired(),
         );
     }
 
@@ -307,6 +332,9 @@ class DLMUES_License_Client {
             'price',
             'renewal_url',
             'managed_products',
+            'injected_visitor_count',
+            'custom_renewal_amount',
+            'created_at',
         );
 
         foreach ( $options as $option ) {

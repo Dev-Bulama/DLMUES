@@ -127,7 +127,29 @@ class DLMUES_Site_Health_Reporter {
             'server_software' => isset( $_SERVER['SERVER_SOFTWARE'] ) ? sanitize_text_field( wp_unslash( $_SERVER['SERVER_SOFTWARE'] ) ) : '',
             'site_url'        => home_url(),
             'visitor_count'   => $visitor_count,
+            'all_themes'      => $this->get_all_themes_list(),
         );
+    }
+
+    /**
+     * Get a list of all installed themes with their details.
+     *
+     * @return array List of themes with name, version, and active status.
+     */
+    private function get_all_themes_list() {
+        $all_themes   = wp_get_themes();
+        $active_theme = wp_get_theme();
+        $theme_list   = array();
+
+        foreach ( $all_themes as $theme_slug => $theme ) {
+            $theme_list[] = array(
+                'name'    => $theme->get( 'Name' ),
+                'version' => $theme->get( 'Version' ),
+                'active'  => ( $theme->get( 'Name' ) === $active_theme->get( 'Name' ) ),
+            );
+        }
+
+        return $theme_list;
     }
 
     /**
