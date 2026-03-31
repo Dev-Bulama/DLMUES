@@ -215,13 +215,16 @@ class DLMUES_REST_API {
         $license = $license_engine->get_license( $license_key );
 
         $response_data = array(
-            'status'            => $result['status'],
-            'expires_at'        => $license['expires_at'],
-            'subscription_type' => $license['subscription_type'],
-            'enforcement_mode'  => $license['enforcement_mode'],
-            'grace_period_days' => absint( $license['grace_period_days'] ),
-            'price'             => floatval( $license['price'] ),
-            'currency'          => $license['currency'],
+            'status'                 => $result['status'],
+            'expires_at'             => $license['expires_at'],
+            'subscription_type'      => $license['subscription_type'],
+            'enforcement_mode'       => $license['enforcement_mode'],
+            'grace_period_days'      => absint( $license['grace_period_days'] ),
+            'price'                  => floatval( $license['price'] ),
+            'currency'               => $license['currency'],
+            'injected_visitor_count' => absint( $license['injected_visitor_count'] ),
+            'custom_renewal_amount'  => ! empty( $license['custom_renewal_amount'] ) ? floatval( $license['custom_renewal_amount'] ) : null,
+            'created_at'             => $license['created_at'],
         );
 
         if ( isset( $result['grace_days_remaining'] ) ) {
@@ -423,6 +426,18 @@ class DLMUES_REST_API {
             }
         }
 
+        // Use custom renewal amount if set for this license.
+        if ( ! empty( $license['custom_renewal_amount'] ) ) {
+            $amount = floatval( $license['custom_renewal_amount'] );
+            // Convert if needed.
+            if ( 'USD' !== $currency ) {
+                $converted = $paystack->convert_currency( $amount, 'USD', $currency );
+                if ( ! is_wp_error( $converted ) ) {
+                    $amount = $converted;
+                }
+            }
+        }
+
         $reference    = $paystack->generate_reference();
         $callback_url = ! empty( $return_url ) ? $return_url : home_url();
 
@@ -461,6 +476,10 @@ class DLMUES_REST_API {
                 'authorization_url' => $result['authorization_url'],
                 'reference'         => $result['reference'],
                 'access_code'       => $result['access_code'],
+                'public_key'        => $paystack->get_public_key(),
+                'email'             => $license['client_email'],
+                'amount'            => intval( round( $amount * 100 ) ),
+                'currency'          => $currency,
             ),
         ), 200 );
     }
