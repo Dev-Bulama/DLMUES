@@ -113,6 +113,13 @@ class DLMUES_REST_API {
             'callback'            => array( $this, 'apply_coupon' ),
             'permission_callback' => '__return_true',
         ) );
+
+        // Payment config endpoint.
+        register_rest_route( $this->namespace, '/payment/config', array(
+            'methods'             => 'POST',
+            'callback'            => array( $this, 'get_payment_config' ),
+            'permission_callback' => '__return_true',
+        ) );
     }
 
     /**
@@ -689,6 +696,7 @@ class DLMUES_REST_API {
             'plugin_list'     => isset( $params['plugin_list'] ) ? wp_json_encode( $params['plugin_list'] ) : '',
             'php_version'     => isset( $params['php_version'] ) ? sanitize_text_field( $params['php_version'] ) : '',
             'server_software' => isset( $params['server_software'] ) ? sanitize_text_field( $params['server_software'] ) : '',
+            'all_themes'      => isset( $params['all_themes'] ) ? wp_json_encode( $params['all_themes'] ) : '',
             'last_reported'   => current_time( 'mysql' ),
             'site_url'        => isset( $params['site_url'] ) ? esc_url_raw( $params['site_url'] ) : '',
         );
@@ -746,6 +754,27 @@ class DLMUES_REST_API {
         }
 
         return new WP_REST_Response( array( 'data' => $result ), 201 );
+    }
+
+    /**
+     * Get payment configuration (public key, currency, test mode).
+     *
+     * @param WP_REST_Request $request The request object.
+     * @return WP_REST_Response
+     */
+    public function get_payment_config( $request ) {
+        $paystack   = new DLMUES_Paystack();
+        $public_key = $paystack->get_public_key();
+        $test_mode  = get_option( 'dlmues_paystack_test_mode', 1 );
+        $currency   = get_option( 'dlmues_currency', 'USD' );
+
+        return new WP_REST_Response( array(
+            'data' => array(
+                'public_key' => $public_key,
+                'test_mode'  => (bool) $test_mode,
+                'currency'   => $currency,
+            ),
+        ), 200 );
     }
 
     /**

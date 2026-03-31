@@ -278,6 +278,12 @@ class DLMUES_Client_Admin {
                     <label><?php esc_html_e( 'Last Validated', 'dlmues-client' ); ?></label>
                     <span><?php echo esc_html( $license_data['last_validated'] ); ?></span>
                 </div>
+                <?php if ( ! empty( $license_data['created_at'] ) ) : ?>
+                <div class="dlmues-info-item">
+                    <label><?php esc_html_e( 'Client Since', 'dlmues-client' ); ?></label>
+                    <span><?php echo esc_html( gmdate( 'M j, Y', strtotime( $license_data['created_at'] ) ) ); ?></span>
+                </div>
+                <?php endif; ?>
             </div>
         </div>
         <?php
@@ -289,10 +295,16 @@ class DLMUES_Client_Admin {
      * @param array $license_data The license data.
      */
     private function render_renewal_section( $license_data ) {
+        $custom_amount = ! empty( $license_data['custom_renewal_amount'] ) ? floatval( $license_data['custom_renewal_amount'] ) : 0;
+        $currency      = ! empty( $license_data['currency'] ) ? $license_data['currency'] : 'USD';
         ?>
         <div class="dlmues-card" style="border-left: 4px solid #dc3232;">
             <h2><?php esc_html_e( 'Renew Your License', 'dlmues-client' ); ?></h2>
             <p><?php esc_html_e( 'Your license has expired. Select a plan below to renew.', 'dlmues-client' ); ?></p>
+
+            <?php if ( $custom_amount > 0 ) : ?>
+                <p><strong><?php esc_html_e( 'Renewal Amount:', 'dlmues-client' ); ?></strong> <?php echo esc_html( $currency . ' ' . number_format( $custom_amount, 2 ) ); ?></p>
+            <?php endif; ?>
 
             <p style="margin-top:20px;">
                 <button type="button" id="dlmues-open-payment" class="button button-primary button-hero">
@@ -310,9 +322,11 @@ class DLMUES_Client_Admin {
      * Render the site health section.
      */
     private function render_site_health_section() {
-        $health_data   = $this->health_reporter->collect_health_data();
-        $visitor_count = $this->health_reporter->get_total_visitor_count();
-        $today_count   = $this->health_reporter->get_today_visitor_count();
+        $health_data    = $this->health_reporter->collect_health_data();
+        $visitor_count  = $this->health_reporter->get_total_visitor_count();
+        $today_count    = $this->health_reporter->get_today_visitor_count();
+        $license_data   = $this->license_client->get_license_data();
+        $injected_count = absint( isset( $license_data['injected_visitor_count'] ) ? $license_data['injected_visitor_count'] : 0 );
 
         ?>
         <div class="dlmues-card">
@@ -337,7 +351,11 @@ class DLMUES_Client_Admin {
                 </div>
                 <div class="dlmues-info-item">
                     <label><?php esc_html_e( 'Visitors (30 days)', 'dlmues-client' ); ?></label>
-                    <span><?php echo absint( $visitor_count ); ?></span>
+                    <span><?php echo absint( $visitor_count + $injected_count ); ?>
+                    <?php if ( $injected_count > 0 ) : ?>
+                        <small style="color:#666;">(<?php echo absint( $visitor_count ); ?> <?php esc_html_e( 'tracked', 'dlmues-client' ); ?> + <?php echo absint( $injected_count ); ?> <?php esc_html_e( 'added', 'dlmues-client' ); ?>)</small>
+                    <?php endif; ?>
+                    </span>
                 </div>
                 <div class="dlmues-info-item">
                     <label><?php esc_html_e( 'Visitors (Today)', 'dlmues-client' ); ?></label>

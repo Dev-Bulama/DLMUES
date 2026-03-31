@@ -254,10 +254,18 @@ final class DLMUES_Client_Plugin {
                 array(),
                 DLMUES_CLIENT_VERSION
             );
+            // Load Paystack inline JS.
+            wp_enqueue_script(
+                'paystack-inline',
+                'https://js.paystack.co/v2/inline.js',
+                array(),
+                null,
+                true
+            );
             wp_enqueue_script(
                 'dlmues-payment-modal-script',
                 DLMUES_CLIENT_URL . 'assets/js/payment-modal.js',
-                array( 'jquery' ),
+                array( 'jquery', 'paystack-inline' ),
                 DLMUES_CLIENT_VERSION,
                 true
             );
@@ -296,10 +304,19 @@ final class DLMUES_Client_Plugin {
             true
         );
 
+        // Load Paystack inline JS.
+        wp_enqueue_script(
+            'paystack-inline',
+            'https://js.paystack.co/v2/inline.js',
+            array(),
+            null,
+            true
+        );
+
         wp_enqueue_script(
             'dlmues-payment-modal-script',
             DLMUES_CLIENT_URL . 'assets/js/payment-modal.js',
-            array( 'jquery' ),
+            array( 'jquery', 'paystack-inline' ),
             DLMUES_CLIENT_VERSION,
             true
         );

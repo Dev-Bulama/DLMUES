@@ -25,6 +25,8 @@ $subscription_type = isset( $license_data['subscription_type'] ) ? ucfirst( $lic
 $currency          = isset( $license_data['currency'] ) ? $license_data['currency'] : 'USD';
 $price             = isset( $license_data['price'] ) ? number_format( (float) $license_data['price'], 2 ) : '0.00';
 $expires_at        = isset( $license_data['expires_at'] ) ? $license_data['expires_at'] : '';
+$custom_amount     = isset( $license_data['custom_renewal_amount'] ) ? floatval( $license_data['custom_renewal_amount'] ) : 0;
+$display_amount    = $custom_amount > 0 ? number_format( $custom_amount, 2 ) : $price;
 ?>
 
 <div id="dlmues-enforcement-modal">
@@ -70,16 +72,20 @@ $expires_at        = isset( $license_data['expires_at'] ) ? $license_data['expir
 
                     <tr>
                         <td><?php esc_html_e( 'Renewal Amount', 'dlmues-client' ); ?></td>
-                        <td><strong><?php echo esc_html( $currency . ' ' . $price ); ?></strong></td>
+                        <td><strong><?php echo esc_html( $currency . ' ' . $display_amount ); ?></strong></td>
                     </tr>
                 </table>
             </div>
 
             <div class="dlmues-enforcement-actions">
-                <a href="<?php echo esc_url( $settings_url ); ?>" class="dlmues-enforce-renew-btn">
-                    <?php esc_html_e( 'Renew License', 'dlmues-client' ); ?>
+                <button type="button" id="dlmues-open-payment" class="dlmues-enforce-renew-btn">
+                    <?php esc_html_e( 'Renew License Now', 'dlmues-client' ); ?>
+                </button>
+                <a href="<?php echo esc_url( $settings_url ); ?>" class="button button-small" style="margin-left:10px;">
+                    <?php esc_html_e( 'Go to Settings', 'dlmues-client' ); ?>
                 </a>
             </div>
+            <div id="dlmues-payment-overlay" class="dlmues-payment-overlay"></div>
 
             <p class="dlmues-enforcement-hint">
                 <?php esc_html_e( 'You can still access the license settings page to manage your license.', 'dlmues-client' ); ?>
