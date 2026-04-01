@@ -179,7 +179,7 @@ class DLMUES_Client_Admin {
         ?>
         <div class="dlmues-card">
             <h2><?php esc_html_e( 'Activate License', 'dlmues-client' ); ?></h2>
-            <p><?php esc_html_e( 'Enter your license key and server URL to activate your license.', 'dlmues-client' ); ?></p>
+            <p><?php esc_html_e( 'Enter your license key to activate your license.', 'dlmues-client' ); ?></p>
 
             <div id="dlmues-activation-form">
                 <table class="form-table">
@@ -188,13 +188,6 @@ class DLMUES_Client_Admin {
                         <td>
                             <input type="text" id="dlmues-license-key" class="regular-text" placeholder="DLMUES-XXXX-XXXX-XXXX-XXXX">
                             <p class="description"><?php esc_html_e( 'Your license key provided at purchase.', 'dlmues-client' ); ?></p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th><label for="dlmues-server-url"><?php esc_html_e( 'Server URL', 'dlmues-client' ); ?></label></th>
-                        <td>
-                            <input type="url" id="dlmues-server-url" class="regular-text" placeholder="https://licenses.example.com">
-                            <p class="description"><?php esc_html_e( 'The URL of your license server.', 'dlmues-client' ); ?></p>
                         </td>
                     </tr>
                 </table>

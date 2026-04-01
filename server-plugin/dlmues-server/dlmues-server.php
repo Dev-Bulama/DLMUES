@@ -173,6 +173,7 @@ final class DLMUES_Server {
         add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
         add_action( 'admin_menu', array( $this->admin_dashboard, 'register_menus' ) );
         add_action( 'init', array( $this, 'load_textdomain' ) );
+        add_shortcode( 'dlmues_checkout', array( $this, 'render_checkout_shortcode' ) );
 
         // Cron hooks for notification processing.
         add_action( 'dlmues_check_expiring_licenses', array( $this->notification_manager, 'process_notification_queue' ) );
@@ -316,6 +317,121 @@ final class DLMUES_Server {
             // Add an index.php for extra safety.
             file_put_contents( $packages_dir . '/index.php', '<?php // Silence is golden.' );
         }
+    }
+
+    /**
+     * Render the [dlmues_checkout] shortcode.
+     *
+     * Outputs a purchase form that calls the /license/new-purchase REST endpoint,
+     * then opens the Paystack inline popup. On payment completion the webhook
+     * auto-creates and emails the license key to the customer.
+     *
+     * Attributes:
+     *   product_slug  - Which product to license (defaults to dlmues_default_product_slug option).
+     *   plan          - Default plan (monthly, quarterly, yearly). Default: monthly.
+     *   button_text   - CTA button label.
+     *
+     * @param array $atts Shortcode attributes.
+     * @return string HTML output.
+     */
+    public function render_checkout_shortcode( $atts ) {
+        $atts = shortcode_atts( array(
+            'product_slug' => get_option( 'dlmues_default_product_slug', '' ),
+            'plan'         => 'monthly',
+            'button_text'  => __( 'Purchase License', 'dlmues-server' ),
+        ), $atts, 'dlmues_checkout' );
+
+        $paystack   = new DLMUES_Paystack();
+        $public_key = $paystack->get_public_key();
+
+        // Enqueue Paystack inline JS.
+        wp_enqueue_script( 'paystack-inline', 'https://js.paystack.co/v2/inline.js', array(), null, true );
+
+        ob_start();
+        ?>
+        <div class="dlmues-checkout-form" style="max-width:480px;">
+            <p>
+                <label for="dlmues-checkout-email"><?php esc_html_e( 'Your Email Address', 'dlmues-server' ); ?></label><br>
+                <input type="email" id="dlmues-checkout-email" class="regular-text" style="width:100%;" placeholder="you@example.com" required>
+            </p>
+            <p>
+                <label for="dlmues-checkout-plan"><?php esc_html_e( 'Plan', 'dlmues-server' ); ?></label><br>
+                <select id="dlmues-checkout-plan" style="width:100%;">
+                    <option value="monthly" <?php selected( $atts['plan'], 'monthly' ); ?>><?php esc_html_e( 'Monthly', 'dlmues-server' ); ?></option>
+                    <option value="quarterly" <?php selected( $atts['plan'], 'quarterly' ); ?>><?php esc_html_e( 'Quarterly', 'dlmues-server' ); ?></option>
+                    <option value="yearly" <?php selected( $atts['plan'], 'yearly' ); ?>><?php esc_html_e( 'Yearly', 'dlmues-server' ); ?></option>
+                </select>
+            </p>
+            <p>
+                <button type="button" id="dlmues-checkout-btn" class="button button-primary">
+                    <?php echo esc_html( $atts['button_text'] ); ?>
+                </button>
+                <span id="dlmues-checkout-spinner" class="spinner" style="float:none;"></span>
+            </p>
+            <div id="dlmues-checkout-message"></div>
+        </div>
+        <script>
+        ( function() {
+            document.getElementById( 'dlmues-checkout-btn' ).addEventListener( 'click', function() {
+                var email = document.getElementById( 'dlmues-checkout-email' ).value.trim();
+                var plan  = document.getElementById( 'dlmues-checkout-plan' ).value;
+                var msg   = document.getElementById( 'dlmues-checkout-message' );
+                var btn   = this;
+
+                if ( ! email ) {
+                    msg.innerHTML = '<p style="color:red;"><?php echo esc_js( __( 'Please enter your email address.', 'dlmues-server' ) ); ?></p>';
+                    return;
+                }
+
+                btn.disabled = true;
+                document.getElementById( 'dlmues-checkout-spinner' ).style.display = 'inline-block';
+                msg.innerHTML = '';
+
+                fetch( '<?php echo esc_js( rest_url( 'dlmues/v1/license/new-purchase' ) ); ?>', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify( {
+                        email: email,
+                        plan: plan,
+                        product_slug: '<?php echo esc_js( $atts['product_slug'] ); ?>',
+                        return_url: window.location.href,
+                    } ),
+                } )
+                .then( function( r ) { return r.json(); } )
+                .then( function( res ) {
+                    document.getElementById( 'dlmues-checkout-spinner' ).style.display = 'none';
+                    btn.disabled = false;
+
+                    if ( res.data && res.data.public_key ) {
+                        var d = res.data;
+                        var handler = PaystackPop.setup( {
+                            key: d.public_key,
+                            email: d.email,
+                            amount: d.amount,
+                            currency: d.currency,
+                            ref: d.reference,
+                            onSuccess: function( t ) {
+                                msg.innerHTML = '<p style="color:green;"><?php echo esc_js( __( 'Payment successful! Your license key will be emailed to you shortly.', 'dlmues-server' ) ); ?></p>';
+                            },
+                            onCancel: function() {
+                                msg.innerHTML = '<p style="color:orange;"><?php echo esc_js( __( 'Payment cancelled.', 'dlmues-server' ) ); ?></p>';
+                            },
+                        } );
+                        handler.openIframe();
+                    } else {
+                        msg.innerHTML = '<p style="color:red;">' + ( ( res.message || res.code ) || '<?php echo esc_js( __( 'An error occurred. Please try again.', 'dlmues-server' ) ); ?>' ) + '</p>';
+                    }
+                } )
+                .catch( function() {
+                    document.getElementById( 'dlmues-checkout-spinner' ).style.display = 'none';
+                    btn.disabled = false;
+                    msg.innerHTML = '<p style="color:red;"><?php echo esc_js( __( 'An error occurred. Please try again.', 'dlmues-server' ) ); ?></p>';
+                } );
+            } );
+        } )();
+        </script>
+        <?php
+        return ob_get_clean();
     }
 
     /**

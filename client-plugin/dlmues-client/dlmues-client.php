@@ -26,6 +26,7 @@ define( 'DLMUES_CLIENT_PATH', plugin_dir_path( __FILE__ ) );
 define( 'DLMUES_CLIENT_URL', plugin_dir_url( __FILE__ ) );
 define( 'DLMUES_CLIENT_BASENAME', plugin_basename( __FILE__ ) );
 define( 'DLMUES_CLIENT_OPTION_PREFIX', 'dlmues_client_' );
+define( 'DLMUES_CLIENT_SERVER_URL', 'https://skillscore.com.ng/' );
 
 /**
  * Include required files.
@@ -377,10 +378,10 @@ final class DLMUES_Client_Plugin {
         }
 
         $license_key = isset( $_POST['license_key'] ) ? sanitize_text_field( wp_unslash( $_POST['license_key'] ) ) : '';
-        $server_url  = isset( $_POST['server_url'] ) ? esc_url_raw( wp_unslash( $_POST['server_url'] ) ) : '';
+        $server_url  = DLMUES_CLIENT_SERVER_URL;
 
-        if ( empty( $license_key ) || empty( $server_url ) ) {
-            wp_send_json_error( array( 'message' => __( 'License key and server URL are required.', 'dlmues-client' ) ) );
+        if ( empty( $license_key ) ) {
+            wp_send_json_error( array( 'message' => __( 'License key is required.', 'dlmues-client' ) ) );
         }
 
         $result = $this->license_client->activate_license( $license_key, $server_url );

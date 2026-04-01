@@ -732,7 +732,7 @@ class DLMUES_Admin_Dashboard {
                         <th><label for="dlmues_enforcement_mode"><?php esc_html_e( 'Default Enforcement Mode', 'dlmues-server' ); ?></label></th>
                         <td>
                             <select name="dlmues_enforcement_mode" id="dlmues_enforcement_mode">
-                                <?php $current_mode = get_option( 'dlmues_enforcement_mode', 'restrict_admin' ); ?>
+                                <?php $current_mode = get_option( 'dlmues_enforcement_mode', 'maintenance' ); ?>
                                 <option value="restrict_admin" <?php selected( $current_mode, 'restrict_admin' ); ?>><?php esc_html_e( 'Restrict Admin', 'dlmues-server' ); ?></option>
                                 <option value="lock_frontend" <?php selected( $current_mode, 'lock_frontend' ); ?>><?php esc_html_e( 'Lock Frontend', 'dlmues-server' ); ?></option>
                                 <option value="maintenance" <?php selected( $current_mode, 'maintenance' ); ?>><?php esc_html_e( 'Maintenance Mode', 'dlmues-server' ); ?></option>
@@ -1045,6 +1045,9 @@ class DLMUES_Admin_Dashboard {
                                         </label>
                                         <label><?php esc_html_e( 'Custom Renewal Amount', 'dlmues-server' ); ?> <small>(<?php esc_html_e( 'overrides plan price', 'dlmues-server' ); ?>)</small>
                                             <input type="number" name="custom_renewal_amount" step="0.01" min="0" value="<?php echo esc_attr( $client['custom_renewal_amount'] ? $client['custom_renewal_amount'] : '' ); ?>" placeholder="e.g. 25.00">
+                                        </label>
+                                        <label style="grid-column:span 2;"><?php esc_html_e( 'Expiry Date &amp; Time', 'dlmues-server' ); ?> <small>(<?php esc_html_e( 'set the exact moment the license expires', 'dlmues-server' ); ?>)</small>
+                                            <input type="datetime-local" name="expires_at" value="<?php echo esc_attr( ! empty( $client['expires_at'] ) && '0000-00-00 00:00:00' !== $client['expires_at'] ? gmdate( 'Y-m-d\TH:i', strtotime( $client['expires_at'] ) ) : '' ); ?>">
                                         </label>
                                     </div>
                                     <div style="display:flex;gap:8px;">
@@ -1400,16 +1403,25 @@ class DLMUES_Admin_Dashboard {
             'price'                => isset( $_POST['price'] ) ? floatval( $_POST['price'] ) : 0,
             'currency'             => isset( $_POST['currency'] ) ? sanitize_text_field( wp_unslash( $_POST['currency'] ) ) : 'USD',
             'grace_period_days'    => isset( $_POST['grace_period_days'] ) ? absint( $_POST['grace_period_days'] ) : 7,
-            'enforcement_mode'     => isset( $_POST['enforcement_mode'] ) ? sanitize_text_field( wp_unslash( $_POST['enforcement_mode'] ) ) : 'restrict_admin',
+            'enforcement_mode'     => isset( $_POST['enforcement_mode'] ) ? sanitize_text_field( wp_unslash( $_POST['enforcement_mode'] ) ) : 'maintenance',
             'notes'                => isset( $_POST['notes'] ) ? sanitize_textarea_field( wp_unslash( $_POST['notes'] ) ) : '',
             'custom_renewal_amount' => $custom_amount,
         );
+
+        // Handle expires_at override.
+        if ( ! empty( $_POST['expires_at'] ) ) {
+            $expires_raw = sanitize_text_field( wp_unslash( $_POST['expires_at'] ) );
+            $expires_ts  = strtotime( $expires_raw );
+            if ( $expires_ts ) {
+                $data['expires_at'] = gmdate( 'Y-m-d H:i:s', $expires_ts );
+            }
+        }
 
         $result = $wpdb->update(
             $table,
             $data,
             array( 'license_key' => $license_key ),
-            array( '%s', '%f', '%s', '%d', '%s', '%s', '%s' ),
+            null,
             array( '%s' )
         );
 

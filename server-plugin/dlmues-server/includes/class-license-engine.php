@@ -438,6 +438,55 @@ class DLMUES_License_Engine {
     }
 
     /**
+     * Activate a pending license created during new-purchase flow.
+     *
+     * Sets status to 'active', calculates the expiry date from now,
+     * and sets last_payment_date. Called after successful Paystack payment.
+     *
+     * @param string $license_key The license key.
+     * @param string $duration    The subscription duration type.
+     * @return array|WP_Error Activation result or WP_Error.
+     */
+    public function activate_pending_license( $license_key, $duration ) {
+        global $wpdb;
+
+        $table   = $wpdb->prefix . $this->table;
+        $license = $this->get_license( $license_key );
+
+        if ( ! $license ) {
+            return new WP_Error( 'invalid_license', __( 'License key not found.', 'dlmues-server' ), array( 'status' => 404 ) );
+        }
+
+        $now        = current_time( 'mysql' );
+        $new_expiry = $this->calculate_expiry( $now, $duration );
+
+        $result = $wpdb->update(
+            $table,
+            array(
+                'expires_at'        => $new_expiry,
+                'status'            => 'active',
+                'subscription_type' => sanitize_text_field( $duration ),
+                'last_payment_date' => $now,
+            ),
+            array( 'license_key' => $license_key ),
+            array( '%s', '%s', '%s', '%s' ),
+            array( '%s' )
+        );
+
+        if ( false === $result ) {
+            return new WP_Error( 'activation_failed', __( 'Failed to activate license.', 'dlmues-server' ), array( 'status' => 500 ) );
+        }
+
+        return array(
+            'activated'   => true,
+            'license_key' => $license_key,
+            'new_expiry'  => $new_expiry,
+            'duration'    => $duration,
+            'status'      => 'active',
+        );
+    }
+
+    /**
      * Get full license data by license key.
      *
      * @param string $license_key The license key.

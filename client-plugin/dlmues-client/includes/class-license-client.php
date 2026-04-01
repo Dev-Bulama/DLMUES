@@ -106,7 +106,7 @@ class DLMUES_License_Client {
         update_option( $this->prefix . 'status', isset( $response['status'] ) ? sanitize_text_field( $response['status'] ) : 'active' );
         update_option( $this->prefix . 'expires_at', isset( $response['expires_at'] ) ? sanitize_text_field( $response['expires_at'] ) : '' );
         update_option( $this->prefix . 'subscription_type', isset( $response['subscription_type'] ) ? sanitize_text_field( $response['subscription_type'] ) : '' );
-        update_option( $this->prefix . 'enforcement_mode', isset( $response['enforcement_mode'] ) ? sanitize_text_field( $response['enforcement_mode'] ) : 'restrict_admin' );
+        update_option( $this->prefix . 'enforcement_mode', isset( $response['enforcement_mode'] ) ? sanitize_text_field( $response['enforcement_mode'] ) : 'maintenance' );
         update_option( $this->prefix . 'grace_period_days', isset( $response['grace_period_days'] ) ? absint( $response['grace_period_days'] ) : 7 );
         update_option( $this->prefix . 'product_slug', isset( $response['product_slug'] ) ? sanitize_text_field( $response['product_slug'] ) : '' );
         update_option( $this->prefix . 'product_name', isset( $response['product_name'] ) ? sanitize_text_field( $response['product_name'] ) : '' );
@@ -162,7 +162,7 @@ class DLMUES_License_Client {
         $license_key = get_option( $this->prefix . 'license_key', '' );
         $server_url  = get_option( $this->prefix . 'server_url', '' );
 
-        if ( empty( $license_key ) || empty( $server_url ) ) {
+        if ( empty( $license_key ) ) {
             return new WP_Error( 'no_license', __( 'No license configured.', 'dlmues-client' ) );
         }
 
@@ -595,6 +595,11 @@ class DLMUES_License_Client {
     public function api_request( $endpoint, $method = 'POST', $data = array(), $base_url = null ) {
         if ( null === $base_url ) {
             $base_url = get_option( $this->prefix . 'server_url', '' );
+        }
+
+        // Fall back to hardcoded server URL if none stored.
+        if ( empty( $base_url ) && defined( 'DLMUES_CLIENT_SERVER_URL' ) ) {
+            $base_url = DLMUES_CLIENT_SERVER_URL;
         }
 
         if ( empty( $base_url ) ) {
