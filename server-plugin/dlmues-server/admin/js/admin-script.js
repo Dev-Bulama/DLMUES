@@ -112,6 +112,8 @@
                     grace_period_days: $row.find( '[name="grace_period_days"]' ).val(),
                     enforcement_mode: $row.find( '[name="enforcement_mode"]' ).val(),
                     notes: $row.find( '[name="notes"]' ).val(),
+                    custom_renewal_amount: $row.find( '[name="custom_renewal_amount"]' ).val(),
+                    expires_at: $row.find( '[name="expires_at"]' ).val(),
                 };
 
                 $btn.prop( 'disabled', true ).text( 'Saving...' );

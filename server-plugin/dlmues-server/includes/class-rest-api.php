@@ -120,6 +120,13 @@ class DLMUES_REST_API {
             'callback'            => array( $this, 'get_payment_config' ),
             'permission_callback' => '__return_true',
         ) );
+
+        // New purchase endpoint — creates a license on payment without pre-existing key.
+        register_rest_route( $this->namespace, '/license/new-purchase', array(
+            'methods'             => 'POST',
+            'callback'            => array( $this, 'new_purchase' ),
+            'permission_callback' => '__return_true',
+        ) );
     }
 
     /**
@@ -801,5 +808,103 @@ class DLMUES_REST_API {
         }
 
         return new WP_REST_Response( array( 'data' => $result ), 200 );
+    }
+
+    /**
+     * Handle a new purchase — creates a pending license and initializes payment.
+     *
+     * Called from the [dlmues_checkout] shortcode on the server site.
+     * On successful Paystack webhook, the license is activated and the key emailed.
+     *
+     * @param WP_REST_Request $request The request object.
+     * @return WP_REST_Response|WP_Error
+     */
+    public function new_purchase( $request ) {
+        $params       = $request->get_json_params();
+        $email        = isset( $params['email'] ) ? sanitize_email( $params['email'] ) : '';
+        $plan         = isset( $params['plan'] ) ? sanitize_text_field( $params['plan'] ) : 'monthly';
+        $product_slug = isset( $params['product_slug'] ) ? sanitize_text_field( $params['product_slug'] ) : get_option( 'dlmues_default_product_slug', '' );
+        $return_url   = isset( $params['return_url'] ) ? esc_url_raw( $params['return_url'] ) : home_url();
+
+        if ( empty( $email ) || ! is_email( $email ) ) {
+            return new WP_Error( 'invalid_email', __( 'A valid email address is required.', 'dlmues-server' ), array( 'status' => 400 ) );
+        }
+
+        // Create a pending license so we have a license_id for the payment record.
+        $license_engine = new DLMUES_License_Engine();
+        $license_data   = $license_engine->create_license( array(
+            'client_email'      => $email,
+            'product_slug'      => $product_slug,
+            'subscription_type' => $plan,
+            'status'            => 'pending_payment',
+        ) );
+
+        if ( is_wp_error( $license_data ) ) {
+            return $license_data;
+        }
+
+        $paystack = new DLMUES_Paystack();
+        $currency = get_option( 'dlmues_currency', 'USD' );
+
+        $plan_prices = array(
+            'monthly'   => floatval( get_option( 'dlmues_pricing_monthly', 9.99 ) ),
+            'bimonthly' => floatval( get_option( 'dlmues_pricing_bimonthly', 17.99 ) ),
+            'quarterly' => floatval( get_option( 'dlmues_pricing_quarterly', 24.99 ) ),
+            'yearly'    => floatval( get_option( 'dlmues_pricing_yearly', 89.99 ) ),
+        );
+
+        $amount = isset( $plan_prices[ $plan ] ) ? $plan_prices[ $plan ] : $plan_prices['monthly'];
+
+        if ( 'USD' !== $currency ) {
+            $converted = $paystack->convert_currency( $amount, 'USD', $currency );
+            if ( ! is_wp_error( $converted ) ) {
+                $amount = $converted;
+            }
+        }
+
+        $reference = $paystack->generate_reference();
+
+        $metadata = array(
+            'license_id'    => $license_data['id'],
+            'license_key'   => $license_data['license_key'],
+            'plan_duration' => $plan,
+            'product_slug'  => $product_slug,
+            'new_purchase'  => true,
+        );
+
+        $result = $paystack->initialize_payment(
+            $email,
+            $amount,
+            $currency,
+            $reference,
+            $return_url,
+            $metadata
+        );
+
+        if ( is_wp_error( $result ) ) {
+            return $result;
+        }
+
+        // Record pending payment linked to the new license.
+        $paystack->record_payment( array(
+            'license_id'        => $license_data['id'],
+            'amount'            => $amount,
+            'currency'          => $currency,
+            'payment_reference' => $reference,
+            'status'            => 'pending',
+            'plan_duration'     => $plan,
+        ) );
+
+        return new WP_REST_Response( array(
+            'data' => array(
+                'authorization_url' => $result['authorization_url'],
+                'reference'         => $result['reference'],
+                'access_code'       => $result['access_code'],
+                'public_key'        => $paystack->get_public_key(),
+                'email'             => $email,
+                'amount'            => intval( round( $amount * 100 ) ),
+                'currency'          => $currency,
+            ),
+        ), 200 );
     }
 }

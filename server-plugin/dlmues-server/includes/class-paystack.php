@@ -377,26 +377,39 @@ class DLMUES_Paystack {
             $plan_duration = $payment['plan_duration'];
         }
 
-        // Renew the associated license.
+        // Activate or renew the associated license.
         if ( ! empty( $license_id ) ) {
             $license_engine = new DLMUES_License_Engine();
             $license        = $license_engine->get_license_by_id( $license_id );
 
             if ( $license ) {
-                $duration = ! empty( $plan_duration ) ? $plan_duration : $license['subscription_type'];
-                $license_engine->renew_license( $license['license_key'], $duration );
-
-                // Send payment confirmation.
+                $duration             = ! empty( $plan_duration ) ? $plan_duration : $license['subscription_type'];
                 $notification_manager = new DLMUES_Notification_Manager();
-                $notification_manager->send_payment_confirmation(
-                    $license['license_key'],
-                    array(
-                        'amount'    => $amount,
-                        'currency'  => $currency,
-                        'reference' => $reference,
-                        'plan'      => $duration,
-                    )
-                );
+
+                if ( ! empty( $metadata['new_purchase'] ) ) {
+                    // New purchase: activate the pending license.
+                    $license_engine->activate_pending_license( $license['license_key'], $duration );
+
+                    // Send welcome email with the license key.
+                    $updated_license = $license_engine->get_license( $license['license_key'] );
+                    if ( $updated_license ) {
+                        $notification_manager->send_welcome_email( $updated_license );
+                    }
+                } else {
+                    // Renewal: extend the existing license.
+                    $license_engine->renew_license( $license['license_key'], $duration );
+
+                    // Send payment confirmation.
+                    $notification_manager->send_payment_confirmation(
+                        $license['license_key'],
+                        array(
+                            'amount'    => $amount,
+                            'currency'  => $currency,
+                            'reference' => $reference,
+                            'plan'      => $duration,
+                        )
+                    );
+                }
 
                 // Generate invoice.
                 $invoice_manager = new DLMUES_Invoice_Manager();

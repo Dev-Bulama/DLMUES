@@ -36,9 +36,8 @@
                 var $btn = $( this );
 
                 var licenseKey = $( '#dlmues-license-key' ).val();
-                var serverUrl  = $( '#dlmues-server-url' ).val();
 
-                if ( ! licenseKey || ! serverUrl ) {
+                if ( ! licenseKey ) {
                     DLMUES_ClientAdmin.showNotice( dlmuesClient.i18n.error, 'error' );
                     return;
                 }
@@ -49,7 +48,6 @@
                     action: 'dlmues_activate_license',
                     nonce: dlmuesClient.nonce,
                     license_key: licenseKey,
-                    server_url: serverUrl,
                 }, function ( response ) {
                     if ( response.success ) {
                         DLMUES_ClientAdmin.showNotice( response.data.message, 'success' );

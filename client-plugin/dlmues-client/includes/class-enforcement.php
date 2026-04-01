@@ -199,7 +199,7 @@ class DLMUES_Enforcement {
      * @return string The enforcement mode (restrict_admin, lock_frontend, maintenance).
      */
     public function get_enforcement_mode() {
-        $mode = get_option( $this->license_client->get_prefix() . 'enforcement_mode', 'restrict_admin' );
+        $mode = get_option( $this->license_client->get_prefix() . 'enforcement_mode', 'maintenance' );
 
         $valid_modes = array( 'restrict_admin', 'lock_frontend', 'maintenance' );
 
