@@ -927,28 +927,10 @@ class DLMUES_License_Engine {
 
         $new_price = max( 0, $original_price - $discount_amount );
 
-        // Update license price.
-        $license_table = $wpdb->prefix . $this->table;
-        $wpdb->update(
-            $license_table,
-            array( 'price' => $new_price ),
-            array( 'license_key' => $license_key ),
-            array( '%f' ),
-            array( '%s' )
-        );
-
-        // Increment coupon usage.
-        $wpdb->update(
-            $coupon_table,
-            array( 'used_count' => $coupon['used_count'] + 1 ),
-            array( 'id' => $coupon['id'] ),
-            array( '%d' ),
-            array( '%d' )
-        );
-
         return array(
             'coupon_applied'  => true,
             'coupon_code'     => $coupon_code,
+            'coupon_id'       => (int) $coupon['id'],
             'discount_type'   => $coupon['discount_type'],
             'discount_value'  => $discount_value,
             'discount_amount' => round( $discount_amount, 2 ),

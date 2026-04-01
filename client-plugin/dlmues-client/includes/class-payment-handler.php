@@ -37,10 +37,11 @@ class DLMUES_Payment_Handler {
     /**
      * Initiate a payment through the license server.
      *
-     * @param string $plan The plan to purchase (monthly, bimonthly, quarterly, yearly).
+     * @param string $plan        The plan to purchase (monthly, bimonthly, quarterly, yearly).
+     * @param string $coupon_code Optional coupon code to apply.
      * @return array|WP_Error Payment initialization data or WP_Error.
      */
-    public function initiate_payment( $plan ) {
+    public function initiate_payment( $plan, $coupon_code = '' ) {
         $license_key = get_option( $this->license_client->get_prefix() . 'license_key', '' );
 
         if ( empty( $license_key ) ) {
@@ -54,11 +55,17 @@ class DLMUES_Payment_Handler {
 
         $return_url = admin_url( 'options-general.php?page=dlmues-license&payment=complete' );
 
-        $response = $this->license_client->api_request( 'payment/initialize', 'POST', array(
+        $payload = array(
             'license_key' => $license_key,
             'plan'        => $plan,
             'return_url'  => $return_url,
-        ) );
+        );
+
+        if ( ! empty( $coupon_code ) ) {
+            $payload['coupon_code'] = sanitize_text_field( $coupon_code );
+        }
+
+        $response = $this->license_client->api_request( 'payment/initialize', 'POST', $payload );
 
         if ( is_wp_error( $response ) ) {
             return $response;
