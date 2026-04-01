@@ -96,9 +96,21 @@ class DLMUES_Client_Admin {
         <div class="wrap dlmues-client-admin">
             <h1><?php esc_html_e( 'DLMUES License Management', 'dlmues-client' ); ?></h1>
 
-            <?php if ( 'verifying' === $payment_status ) : ?>
-                <div class="notice notice-info">
-                    <p><?php esc_html_e( 'Verifying payment... Please wait.', 'dlmues-client' ); ?></p>
+            <?php if ( 'verifying' === $payment_status ) :
+                $pay_reference = isset( $_GET['reference'] ) ? sanitize_text_field( wp_unslash( $_GET['reference'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+                $pay_trxref    = isset( $_GET['trxref'] ) ? sanitize_text_field( wp_unslash( $_GET['trxref'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+                $pay_ref_final = ! empty( $pay_reference ) ? $pay_reference : $pay_trxref;
+                ?>
+                <div id="dlmues-payment-verification-notice" class="notice notice-info" style="padding: 12px 16px;">
+                    <p id="dlmues-verify-status-msg" style="margin: 0 0 8px;">
+                        <span class="spinner is-active" style="float:none;margin:0 6px 0 0;vertical-align:middle;"></span>
+                        <?php esc_html_e( 'Verifying payment\xe2\x80\xa6 Please wait.', 'dlmues-client' ); ?>
+                    </p>
+                    <button type="button" id="dlmues-retry-verify-btn" class="button"
+                            data-reference="<?php echo esc_attr( $pay_ref_final ); ?>"
+                            style="display:none;">
+                        <?php esc_html_e( 'Retry Verification', 'dlmues-client' ); ?>
+                    </button>
                 </div>
             <?php elseif ( 'returned' === $payment_status ) : ?>
                 <div class="notice notice-success">

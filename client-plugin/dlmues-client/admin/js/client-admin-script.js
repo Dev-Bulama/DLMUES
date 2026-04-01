@@ -181,36 +181,69 @@
         },
 
         /**
-         * Check if returning from a payment.
+         * Check if returning from a payment and bind the retry button.
          */
         checkPaymentReturn: function () {
             var urlParams = new URLSearchParams( window.location.search );
 
             if ( urlParams.get( 'payment' ) === 'complete' ) {
                 var reference = urlParams.get( 'reference' ) || urlParams.get( 'trxref' );
-
                 if ( reference ) {
-                    DLMUES_ClientAdmin.showNotice( 'Verifying payment...', 'info' );
-
-                    $.post( dlmuesClient.ajaxUrl, {
-                        action: 'dlmues_verify_payment',
-                        nonce: ( typeof dlmuesPayment !== 'undefined' ? dlmuesPayment.nonce : dlmuesClient.nonce ),
-                        reference: reference,
-                    }, function ( response ) {
-                        if ( response.success ) {
-                            DLMUES_ClientAdmin.showNotice( response.data.message, 'success' );
-                            setTimeout( function () {
-                                // Remove query params and reload.
-                                window.location.href = dlmuesClient.settingsUrl;
-                            }, 2000 );
-                        } else {
-                            DLMUES_ClientAdmin.showNotice( response.data.message || 'Payment verification failed.', 'error' );
-                        }
-                    } ).fail( function () {
-                        DLMUES_ClientAdmin.showNotice( 'Payment verification failed. Please contact support.', 'error' );
-                    } );
+                    DLMUES_ClientAdmin.doVerifyPayment( reference );
                 }
             }
+
+            // Retry button (shown when auto-verify fails).
+            $( document ).on( 'click', '#dlmues-retry-verify-btn', function () {
+                var ref = $( this ).data( 'reference' );
+                if ( ref ) {
+                    $( this ).hide();
+                    DLMUES_ClientAdmin.doVerifyPayment( ref );
+                }
+            } );
+        },
+
+        /**
+         * Send a payment verification AJAX request.
+         *
+         * @param {string} reference Paystack payment reference.
+         */
+        doVerifyPayment: function ( reference ) {
+            var $notice  = $( '#dlmues-payment-verification-notice' );
+            var $msg     = $notice.length ? $notice.find( '#dlmues-verify-status-msg' ) : null;
+            var $retryBtn = $( '#dlmues-retry-verify-btn' );
+
+            function setNoticeMsg( text, type ) {
+                if ( $notice.length ) {
+                    $notice.removeClass( 'notice-info notice-success notice-error' ).addClass( 'notice-' + type );
+                    if ( $msg.length ) {
+                        $msg.html( text );
+                    }
+                } else {
+                    DLMUES_ClientAdmin.showNotice( text, type );
+                }
+            }
+
+            setNoticeMsg( '<span class="spinner is-active" style="float:none;margin:0 6px 0 0;vertical-align:middle;"></span> Verifying payment\u2026 Please wait.', 'info' );
+
+            $.post( dlmuesClient.ajaxUrl, {
+                action: 'dlmues_verify_payment',
+                nonce: dlmuesClient.nonce,
+                reference: reference,
+            }, function ( response ) {
+                if ( response.success ) {
+                    setNoticeMsg( response.data.message, 'success' );
+                    setTimeout( function () {
+                        window.location.href = dlmuesClient.settingsUrl;
+                    }, 2000 );
+                } else {
+                    setNoticeMsg( ( response.data && response.data.message ) || 'Payment verification failed.', 'error' );
+                    $retryBtn.data( 'reference', reference ).show();
+                }
+            } ).fail( function () {
+                setNoticeMsg( 'Payment verification failed \u2014 server error. Please use the Retry button.', 'error' );
+                $retryBtn.data( 'reference', reference ).show();
+            } );
         },
 
         /**

@@ -33,7 +33,8 @@ class DLMUES_Admin_Dashboard {
         add_action( 'wp_ajax_dlmues_get_invoice',          array( $this, 'ajax_get_invoice' ) );
         add_action( 'wp_ajax_dlmues_send_reminder',        array( $this, 'ajax_send_reminder' ) );
         add_action( 'wp_ajax_dlmues_create_trial',         array( $this, 'ajax_create_trial' ) );
-        add_action( 'wp_ajax_dlmues_test_paystack',        array( $this, 'ajax_test_paystack' ) );
+        add_action( 'wp_ajax_dlmues_test_paystack',           array( $this, 'ajax_test_paystack' ) );
+        add_action( 'wp_ajax_dlmues_admin_verify_payment',    array( $this, 'ajax_admin_verify_payment' ) );
     }
 
     /**
@@ -519,6 +520,8 @@ class DLMUES_Admin_Dashboard {
                 </div>
             </form>
 
+            <div id="dlmues-verify-payment-msg" style="display:none;margin:10px 0;"></div>
+
             <table class="widefat striped">
                 <thead>
                     <tr>
@@ -528,18 +531,19 @@ class DLMUES_Admin_Dashboard {
                         <th><?php esc_html_e( 'Status', 'dlmues-server' ); ?></th>
                         <th><?php esc_html_e( 'Plan', 'dlmues-server' ); ?></th>
                         <th><?php esc_html_e( 'Date', 'dlmues-server' ); ?></th>
+                        <th><?php esc_html_e( 'Actions', 'dlmues-server' ); ?></th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if ( empty( $result['items'] ) ) : ?>
-                        <tr><td colspan="6"><?php esc_html_e( 'No payments found.', 'dlmues-server' ); ?></td></tr>
+                        <tr><td colspan="7"><?php esc_html_e( 'No payments found.', 'dlmues-server' ); ?></td></tr>
                     <?php else : ?>
                         <?php foreach ( $result['items'] as $payment ) : ?>
-                            <tr>
+                            <tr id="dlmues-payment-row-<?php echo esc_attr( $payment['id'] ); ?>">
                                 <td><code><?php echo esc_html( $payment['payment_reference'] ); ?></code></td>
                                 <td><?php echo esc_html( isset( $payment['client_email'] ) ? $payment['client_email'] : '' ); ?></td>
                                 <td><?php echo esc_html( $payment['currency'] . ' ' . number_format( $payment['amount'], 2 ) ); ?></td>
-                                <td>
+                                <td class="dlmues-payment-status-cell">
                                     <?php
                                     $badge_color = 'success' === $payment['status'] ? '#46b450' : '#ffba00';
                                     printf(
@@ -551,12 +555,67 @@ class DLMUES_Admin_Dashboard {
                                 </td>
                                 <td><?php echo esc_html( ucfirst( $payment['plan_duration'] ) ); ?></td>
                                 <td><?php echo esc_html( $payment['created_at'] ); ?></td>
+                                <td>
+                                    <?php if ( 'pending' === $payment['status'] ) : ?>
+                                        <button type="button"
+                                                class="button button-small dlmues-verify-payment-btn"
+                                                data-reference="<?php echo esc_attr( $payment['payment_reference'] ); ?>"
+                                                data-payment-id="<?php echo esc_attr( $payment['id'] ); ?>"
+                                                data-nonce="<?php echo esc_attr( wp_create_nonce( 'dlmues_admin_verify_payment' ) ); ?>">
+                                            <?php esc_html_e( 'Verify', 'dlmues-server' ); ?>
+                                        </button>
+                                    <?php else : ?>
+                                        &mdash;
+                                    <?php endif; ?>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
                 </tbody>
             </table>
         </div>
+
+        <script type="text/javascript">
+        ( function( $ ) {
+            $( document ).on( 'click', '.dlmues-verify-payment-btn', function() {
+                var $btn       = $( this );
+                var reference  = $btn.data( 'reference' );
+                var paymentId  = $btn.data( 'payment-id' );
+                var nonce      = $btn.data( 'nonce' );
+                var $msg       = $( '#dlmues-verify-payment-msg' );
+
+                $btn.prop( 'disabled', true ).text( '<?php echo esc_js( __( 'Verifying\u2026', 'dlmues-server' ) ); ?>' );
+                $msg.hide();
+
+                $.post( ajaxurl, {
+                    action:     'dlmues_admin_verify_payment',
+                    nonce:      nonce,
+                    reference:  reference,
+                    payment_id: paymentId,
+                }, function( response ) {
+                    if ( response.success ) {
+                        $msg.attr( 'class', 'notice notice-success' )
+                            .html( '<p>' + response.data.message + '</p>' )
+                            .show();
+                        // Update status cell in row.
+                        $( '#dlmues-payment-row-' + paymentId + ' .dlmues-payment-status-cell' )
+                            .html( '<span style="color:#46b450;font-weight:bold;">Success</span>' );
+                        $btn.replaceWith( '&mdash;' );
+                    } else {
+                        $msg.attr( 'class', 'notice notice-error' )
+                            .html( '<p>' + ( response.data && response.data.message ? response.data.message : '<?php echo esc_js( __( 'Verification failed.', 'dlmues-server' ) ); ?>' ) + '</p>' )
+                            .show();
+                        $btn.prop( 'disabled', false ).text( '<?php echo esc_js( __( 'Verify', 'dlmues-server' ) ); ?>' );
+                    }
+                } ).fail( function() {
+                    $msg.attr( 'class', 'notice notice-error' )
+                        .html( '<p><?php echo esc_js( __( 'Request failed. Please try again.', 'dlmues-server' ) ); ?></p>' )
+                        .show();
+                    $btn.prop( 'disabled', false ).text( '<?php echo esc_js( __( 'Verify', 'dlmues-server' ) ); ?>' );
+                } );
+            } );
+        } )( jQuery );
+        </script>
         <?php
     }
 
@@ -1870,5 +1929,103 @@ class DLMUES_Admin_Dashboard {
         }
 
         wp_send_json_success( array( 'message' => __( 'Paystack connection successful.', 'dlmues-server' ) ) );
+    }
+
+    /**
+     * AJAX: Manually verify a pending payment against Paystack (server admin).
+     */
+    public function ajax_admin_verify_payment() {
+        check_ajax_referer( 'dlmues_admin_verify_payment', 'nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => __( 'Unauthorized.', 'dlmues-server' ) ) );
+        }
+
+        $reference  = isset( $_POST['reference'] )  ? sanitize_text_field( wp_unslash( $_POST['reference'] ) )  : '';
+        $payment_id = isset( $_POST['payment_id'] ) ? absint( wp_unslash( $_POST['payment_id'] ) )               : 0;
+
+        if ( empty( $reference ) ) {
+            wp_send_json_error( array( 'message' => __( 'Payment reference is required.', 'dlmues-server' ) ) );
+        }
+
+        $paystack = new DLMUES_Paystack();
+        $result   = $paystack->verify_payment( $reference );
+
+        if ( is_wp_error( $result ) ) {
+            wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+        }
+
+        if ( 'success' !== $result['status'] ) {
+            wp_send_json_error( array(
+                'message' => sprintf(
+                    /* translators: %s: transaction status */
+                    __( 'Paystack transaction status: %s', 'dlmues-server' ),
+                    $result['status']
+                ),
+            ) );
+        }
+
+        // Payment confirmed by Paystack — update DB and activate/renew the license.
+        global $wpdb;
+        $payments_table = $wpdb->prefix . 'dlmues_payments';
+
+        // Fetch payment record to get license_id and plan.
+        $payment = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT * FROM {$payments_table} WHERE payment_reference = %s",
+                $reference
+            ),
+            ARRAY_A
+        );
+
+        if ( $payment ) {
+            $wpdb->update(
+                $payments_table,
+                array( 'status' => 'success' ),
+                array( 'id' => $payment['id'] ),
+                array( '%s' ),
+                array( '%d' )
+            );
+
+            $license_id    = absint( $payment['license_id'] );
+            $plan_duration = sanitize_text_field( $payment['plan_duration'] );
+
+            if ( $license_id > 0 ) {
+                $license_engine       = new DLMUES_License_Engine();
+                $license              = $license_engine->get_license_by_id( $license_id );
+
+                if ( $license ) {
+                    $duration = ! empty( $plan_duration ) ? $plan_duration : $license['subscription_type'];
+                    $license_engine->renew_license( $license['license_key'], $duration );
+
+                    $notification_manager = new DLMUES_Notification_Manager();
+                    $notification_manager->send_payment_confirmation(
+                        $license['license_key'],
+                        array(
+                            'amount'    => $result['amount'],
+                            'currency'  => $result['currency'],
+                            'reference' => $reference,
+                            'plan'      => $duration,
+                        )
+                    );
+
+                    $invoice_manager = new DLMUES_Invoice_Manager();
+                    $invoice_manager->generate_invoice( $payment['id'] );
+                }
+            }
+        } elseif ( $payment_id > 0 ) {
+            // Fallback: update by ID if reference lookup failed.
+            $wpdb->update(
+                $payments_table,
+                array( 'status' => 'success' ),
+                array( 'id' => $payment_id ),
+                array( '%s' ),
+                array( '%d' )
+            );
+        }
+
+        wp_send_json_success( array(
+            'message' => __( 'Payment verified and license renewed successfully.', 'dlmues-server' ),
+        ) );
     }
 }
