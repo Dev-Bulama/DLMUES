@@ -467,7 +467,7 @@ final class DLMUES_Client_Plugin {
      * AJAX: Verify payment.
      */
     public function ajax_verify_payment() {
-        check_ajax_referer( 'dlmues_payment_nonce', 'nonce' );
+        check_ajax_referer( 'dlmues_client_nonce', 'nonce' );
 
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_send_json_error( array( 'message' => __( 'Unauthorized access.', 'dlmues-client' ) ) );
