@@ -89,7 +89,7 @@ class DLMUES_License_Engine {
 
         $subscription_type = isset( $data['subscription_type'] ) ? sanitize_text_field( $data['subscription_type'] ) : 'monthly';
         $now               = current_time( 'mysql' );
-        $expires_at        = $this->calculate_expiry( $now, $subscription_type );
+        $expires_at        = ! empty( $data['expires_at'] ) ? sanitize_text_field( $data['expires_at'] ) : $this->calculate_expiry( $now, $subscription_type );
 
         $default_price = $this->get_plan_price( $subscription_type );
 
@@ -99,7 +99,7 @@ class DLMUES_License_Engine {
             'client_email'      => isset( $data['client_email'] ) ? sanitize_email( $data['client_email'] ) : '',
             'product_slug'      => isset( $data['product_slug'] ) ? sanitize_text_field( $data['product_slug'] ) : '',
             'product_type'      => isset( $data['product_type'] ) ? sanitize_text_field( $data['product_type'] ) : 'plugin',
-            'status'            => 'active',
+            'status'            => isset( $data['status'] ) ? sanitize_text_field( $data['status'] ) : 'active',
             'subscription_type' => $subscription_type,
             'price'             => isset( $data['price'] ) ? floatval( $data['price'] ) : $default_price,
             'currency'          => isset( $data['currency'] ) ? sanitize_text_field( $data['currency'] ) : get_option( 'dlmues_currency', 'USD' ),

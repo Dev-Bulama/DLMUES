@@ -406,6 +406,13 @@ class DLMUES_Admin_Dashboard {
                     </td>
                 </tr>
                 <tr>
+                    <th><label for="expires_at_new"><?php esc_html_e( 'Expiry Date &amp; Time', 'dlmues-server' ); ?></label></th>
+                    <td>
+                        <input type="datetime-local" name="expires_at" id="expires_at_new">
+                        <p class="description"><?php esc_html_e( 'Optional. Leave blank to use the default calculated from plan duration.', 'dlmues-server' ); ?></p>
+                    </td>
+                </tr>
+                <tr>
                     <th><label for="notes"><?php esc_html_e( 'Notes', 'dlmues-server' ); ?></label></th>
                     <td><textarea name="notes" id="notes" class="large-text" rows="3"></textarea></td>
                 </tr>
@@ -427,13 +434,20 @@ class DLMUES_Admin_Dashboard {
             }
 
             $license_engine = new DLMUES_License_Engine();
-            $result = $license_engine->create_license( array(
+            $create_data    = array(
                 'client_email'      => isset( $_POST['client_email'] ) ? sanitize_email( wp_unslash( $_POST['client_email'] ) ) : '',
                 'product_slug'      => isset( $_POST['product_slug'] ) ? sanitize_text_field( wp_unslash( $_POST['product_slug'] ) ) : '',
                 'subscription_type' => isset( $_POST['subscription_type'] ) ? sanitize_text_field( wp_unslash( $_POST['subscription_type'] ) ) : 'monthly',
                 'currency'          => isset( $_POST['currency'] ) ? sanitize_text_field( wp_unslash( $_POST['currency'] ) ) : 'USD',
                 'notes'             => isset( $_POST['notes'] ) ? sanitize_textarea_field( wp_unslash( $_POST['notes'] ) ) : '',
-            ) );
+            );
+            if ( ! empty( $_POST['expires_at'] ) ) {
+                $expires_ts = strtotime( sanitize_text_field( wp_unslash( $_POST['expires_at'] ) ) );
+                if ( $expires_ts ) {
+                    $create_data['expires_at'] = gmdate( 'Y-m-d H:i:s', $expires_ts );
+                }
+            }
+            $result = $license_engine->create_license( $create_data );
 
             if ( is_wp_error( $result ) ) {
                 add_settings_error( 'dlmues', 'create_failed', $result->get_error_message(), 'error' );
@@ -998,7 +1012,18 @@ class DLMUES_Admin_Dashboard {
                                 </td>
                                 <td>
                                     <div class="dlmues-actions">
-                                        <button type="button" class="button button-small dlmues-edit-btn" data-license-key="<?php echo esc_attr( $client['license_key'] ); ?>"><?php esc_html_e( 'Edit', 'dlmues-server' ); ?></button>
+                                        <button type="button" class="button button-small dlmues-edit-btn"
+                                            data-license-key="<?php echo esc_attr( $client['license_key'] ); ?>"
+                                            data-subscription-type="<?php echo esc_attr( $client['subscription_type'] ); ?>"
+                                            data-price="<?php echo esc_attr( $client['price'] ); ?>"
+                                            data-currency="<?php echo esc_attr( $client['currency'] ); ?>"
+                                            data-grace-period-days="<?php echo esc_attr( $client['grace_period_days'] ); ?>"
+                                            data-enforcement-mode="<?php echo esc_attr( $client['enforcement_mode'] ); ?>"
+                                            data-notes="<?php echo esc_attr( $client['notes'] ); ?>"
+                                            data-custom-renewal-amount="<?php echo esc_attr( $client['custom_renewal_amount'] ? $client['custom_renewal_amount'] : '' ); ?>"
+                                            data-expires-at="<?php echo esc_attr( ! empty( $client['expires_at'] ) && '0000-00-00 00:00:00' !== $client['expires_at'] ? gmdate( 'Y-m-d\TH:i', strtotime( $client['expires_at'] ) ) : '' ); ?>"
+                                            data-allow-deactivation="<?php echo esc_attr( isset( $client['allow_deactivation'] ) ? $client['allow_deactivation'] : 1 ); ?>"
+                                        ><?php esc_html_e( 'Edit', 'dlmues-server' ); ?></button>
                                         <?php if ( 'active' === $client['status'] || 'trial' === $client['status'] ) : ?>
                                             <button type="button" class="button button-small dlmues-quick-suspend" data-license-key="<?php echo esc_attr( $client['license_key'] ); ?>"><?php esc_html_e( 'Suspend', 'dlmues-server' ); ?></button>
                                         <?php else : ?>
@@ -1008,58 +1033,71 @@ class DLMUES_Admin_Dashboard {
                                     </div>
                                 </td>
                             </tr>
-                            <!-- Inline edit row -->
-                            <tr class="dlmues-inline-edit-row" id="dlmues-edit-<?php echo esc_attr( $safe_key ); ?>">
-                                <td colspan="12">
-                                    <div class="dlmues-inline-edit-grid">
-                                        <label><?php esc_html_e( 'Plan', 'dlmues-server' ); ?>
-                                            <select name="subscription_type">
-                                                <option value="monthly" <?php selected( $client['subscription_type'], 'monthly' ); ?>><?php esc_html_e( 'Monthly', 'dlmues-server' ); ?></option>
-                                                <option value="bimonthly" <?php selected( $client['subscription_type'], 'bimonthly' ); ?>><?php esc_html_e( 'Bi-Monthly', 'dlmues-server' ); ?></option>
-                                                <option value="quarterly" <?php selected( $client['subscription_type'], 'quarterly' ); ?>><?php esc_html_e( 'Quarterly', 'dlmues-server' ); ?></option>
-                                                <option value="yearly" <?php selected( $client['subscription_type'], 'yearly' ); ?>><?php esc_html_e( 'Yearly', 'dlmues-server' ); ?></option>
-                                            </select>
-                                        </label>
-                                        <label><?php esc_html_e( 'Price', 'dlmues-server' ); ?>
-                                            <input type="number" name="price" step="0.01" value="<?php echo esc_attr( $client['price'] ); ?>">
-                                        </label>
-                                        <label><?php esc_html_e( 'Currency', 'dlmues-server' ); ?>
-                                            <select name="currency">
-                                                <?php foreach ( array( 'USD', 'NGN', 'GBP', 'EUR', 'GHS', 'ZAR', 'KES' ) as $c ) : ?>
-                                                    <option value="<?php echo esc_attr( $c ); ?>" <?php selected( $client['currency'], $c ); ?>><?php echo esc_html( $c ); ?></option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                        </label>
-                                        <label><?php esc_html_e( 'Grace Period (days)', 'dlmues-server' ); ?>
-                                            <input type="number" name="grace_period_days" min="0" max="90" value="<?php echo absint( $client['grace_period_days'] ); ?>">
-                                        </label>
-                                        <label><?php esc_html_e( 'Enforcement', 'dlmues-server' ); ?>
-                                            <select name="enforcement_mode">
-                                                <option value="restrict_admin" <?php selected( $client['enforcement_mode'], 'restrict_admin' ); ?>><?php esc_html_e( 'Restrict Admin', 'dlmues-server' ); ?></option>
-                                                <option value="lock_frontend" <?php selected( $client['enforcement_mode'], 'lock_frontend' ); ?>><?php esc_html_e( 'Lock Frontend', 'dlmues-server' ); ?></option>
-                                                <option value="maintenance" <?php selected( $client['enforcement_mode'], 'maintenance' ); ?>><?php esc_html_e( 'Maintenance', 'dlmues-server' ); ?></option>
-                                            </select>
-                                        </label>
-                                        <label><?php esc_html_e( 'Notes', 'dlmues-server' ); ?>
-                                            <input type="text" name="notes" value="<?php echo esc_attr( $client['notes'] ); ?>">
-                                        </label>
-                                        <label><?php esc_html_e( 'Custom Renewal Amount', 'dlmues-server' ); ?> <small>(<?php esc_html_e( 'overrides plan price', 'dlmues-server' ); ?>)</small>
-                                            <input type="number" name="custom_renewal_amount" step="0.01" min="0" value="<?php echo esc_attr( $client['custom_renewal_amount'] ? $client['custom_renewal_amount'] : '' ); ?>" placeholder="e.g. 25.00">
-                                        </label>
-                                        <label style="grid-column:span 2;"><?php esc_html_e( 'Expiry Date &amp; Time', 'dlmues-server' ); ?> <small>(<?php esc_html_e( 'set the exact moment the license expires', 'dlmues-server' ); ?>)</small>
-                                            <input type="datetime-local" name="expires_at" value="<?php echo esc_attr( ! empty( $client['expires_at'] ) && '0000-00-00 00:00:00' !== $client['expires_at'] ? gmdate( 'Y-m-d\TH:i', strtotime( $client['expires_at'] ) ) : '' ); ?>">
-                                        </label>
-                                    </div>
-                                    <div style="display:flex;gap:8px;">
-                                        <button type="button" class="button button-primary button-small dlmues-save-edit" data-license-key="<?php echo esc_attr( $client['license_key'] ); ?>"><?php esc_html_e( 'Save Changes', 'dlmues-server' ); ?></button>
-                                        <button type="button" class="button button-small dlmues-cancel-edit"><?php esc_html_e( 'Cancel', 'dlmues-server' ); ?></button>
-                                    </div>
-                                </td>
-                            </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
                 </tbody>
             </table>
+
+            <!-- Edit license popup -->
+            <div id="dlmues-edit-popup-overlay" class="dlmues-popup-overlay" style="display:none;"></div>
+            <div id="dlmues-edit-license-popup" class="dlmues-site-health-popup" style="display:none;max-width:600px;">
+                <div class="dlmues-popup-header">
+                    <h3><?php esc_html_e( 'Edit License', 'dlmues-server' ); ?></h3>
+                    <button type="button" class="dlmues-popup-close" id="dlmues-edit-popup-close">&times;</button>
+                </div>
+                <div class="dlmues-popup-body" style="padding:20px;">
+                    <div class="dlmues-inline-edit-grid">
+                        <label><?php esc_html_e( 'Plan', 'dlmues-server' ); ?>
+                            <select id="edit-subscription_type">
+                                <option value="monthly"><?php esc_html_e( 'Monthly', 'dlmues-server' ); ?></option>
+                                <option value="bimonthly"><?php esc_html_e( 'Bi-Monthly', 'dlmues-server' ); ?></option>
+                                <option value="quarterly"><?php esc_html_e( 'Quarterly', 'dlmues-server' ); ?></option>
+                                <option value="yearly"><?php esc_html_e( 'Yearly', 'dlmues-server' ); ?></option>
+                            </select>
+                        </label>
+                        <label><?php esc_html_e( 'Price', 'dlmues-server' ); ?>
+                            <input type="number" id="edit-price" step="0.01" min="0">
+                        </label>
+                        <label><?php esc_html_e( 'Currency', 'dlmues-server' ); ?>
+                            <select id="edit-currency">
+                                <?php foreach ( array( 'USD', 'NGN', 'GBP', 'EUR', 'GHS', 'ZAR', 'KES' ) as $c ) : ?>
+                                    <option value="<?php echo esc_attr( $c ); ?>"><?php echo esc_html( $c ); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </label>
+                        <label><?php esc_html_e( 'Grace Period (days)', 'dlmues-server' ); ?>
+                            <input type="number" id="edit-grace_period_days" min="0" max="90">
+                        </label>
+                        <label><?php esc_html_e( 'Enforcement', 'dlmues-server' ); ?>
+                            <select id="edit-enforcement_mode">
+                                <option value="restrict_admin"><?php esc_html_e( 'Restrict Admin', 'dlmues-server' ); ?></option>
+                                <option value="lock_frontend"><?php esc_html_e( 'Lock Frontend', 'dlmues-server' ); ?></option>
+                                <option value="maintenance"><?php esc_html_e( 'Maintenance', 'dlmues-server' ); ?></option>
+                            </select>
+                        </label>
+                        <label><?php esc_html_e( 'Notes', 'dlmues-server' ); ?>
+                            <input type="text" id="edit-notes">
+                        </label>
+                        <label><?php esc_html_e( 'Custom Renewal Amount', 'dlmues-server' ); ?> <small>(<?php esc_html_e( 'overrides plan price', 'dlmues-server' ); ?>)</small>
+                            <input type="number" id="edit-custom_renewal_amount" step="0.01" min="0" placeholder="e.g. 25.00">
+                        </label>
+                        <label><?php esc_html_e( 'Allow Client Deactivation', 'dlmues-server' ); ?>
+                            <select id="edit-allow_deactivation">
+                                <option value="1"><?php esc_html_e( 'Yes — client can deactivate', 'dlmues-server' ); ?></option>
+                                <option value="0"><?php esc_html_e( 'No — hide deactivation button', 'dlmues-server' ); ?></option>
+                            </select>
+                        </label>
+                        <label style="grid-column:span 2;"><?php esc_html_e( 'Expiry Date &amp; Time', 'dlmues-server' ); ?> <small>(<?php esc_html_e( 'exact moment the license expires', 'dlmues-server' ); ?>)</small>
+                            <input type="datetime-local" id="edit-expires_at" style="width:100%;">
+                        </label>
+                    </div>
+                    <div id="dlmues-edit-popup-message" style="margin:10px 0;"></div>
+                    <div style="display:flex;gap:8px;margin-top:12px;">
+                        <button type="button" id="dlmues-edit-popup-save" class="button button-primary"><?php esc_html_e( 'Save Changes', 'dlmues-server' ); ?></button>
+                        <button type="button" id="dlmues-edit-popup-cancel" class="button"><?php esc_html_e( 'Cancel', 'dlmues-server' ); ?></button>
+                    </div>
+                </div>
+            </div>
 
             <!-- Site health popup -->
             <div id="dlmues-popup-overlay" class="dlmues-popup-overlay"></div>
@@ -1406,6 +1444,7 @@ class DLMUES_Admin_Dashboard {
             'enforcement_mode'     => isset( $_POST['enforcement_mode'] ) ? sanitize_text_field( wp_unslash( $_POST['enforcement_mode'] ) ) : 'maintenance',
             'notes'                => isset( $_POST['notes'] ) ? sanitize_textarea_field( wp_unslash( $_POST['notes'] ) ) : '',
             'custom_renewal_amount' => $custom_amount,
+            'allow_deactivation'   => isset( $_POST['allow_deactivation'] ) ? absint( $_POST['allow_deactivation'] ) : 1,
         );
 
         // Handle expires_at override.

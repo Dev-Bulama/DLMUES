@@ -130,7 +130,7 @@ class DLMUES_License_Client {
             update_option( $this->prefix . 'managed_products', array_map( 'sanitize_text_field', $response['managed_products'] ) );
         }
 
-        // Store injected visitor count, custom renewal amount, and client since date.
+        // Store injected visitor count, custom renewal amount, client since date, and deactivation flag.
         if ( isset( $response['injected_visitor_count'] ) ) {
             update_option( $this->prefix . 'injected_visitor_count', absint( $response['injected_visitor_count'] ) );
         }
@@ -139,6 +139,9 @@ class DLMUES_License_Client {
         }
         if ( isset( $response['created_at'] ) ) {
             update_option( $this->prefix . 'created_at', sanitize_text_field( $response['created_at'] ) );
+        }
+        if ( isset( $response['allow_deactivation'] ) ) {
+            update_option( $this->prefix . 'allow_deactivation', (bool) $response['allow_deactivation'] ? 1 : 0 );
         }
 
         // Cache the valid status.
@@ -208,7 +211,7 @@ class DLMUES_License_Client {
             update_option( $this->prefix . 'managed_products', array_map( 'sanitize_text_field', $response['managed_products'] ) );
         }
 
-        // Store injected visitor count, custom renewal amount, and client since date.
+        // Store injected visitor count, custom renewal amount, client since date, and deactivation flag.
         if ( isset( $response['injected_visitor_count'] ) ) {
             update_option( $this->prefix . 'injected_visitor_count', absint( $response['injected_visitor_count'] ) );
         }
@@ -217,6 +220,9 @@ class DLMUES_License_Client {
         }
         if ( isset( $response['created_at'] ) ) {
             update_option( $this->prefix . 'created_at', sanitize_text_field( $response['created_at'] ) );
+        }
+        if ( isset( $response['allow_deactivation'] ) ) {
+            update_option( $this->prefix . 'allow_deactivation', $response['allow_deactivation'] ? 1 : 0 );
         }
 
         update_option( $this->prefix . 'last_validated', current_time( 'mysql' ) );
@@ -287,6 +293,7 @@ class DLMUES_License_Client {
             'injected_visitor_count' => absint( get_option( $this->prefix . 'injected_visitor_count', 0 ) ),
             'custom_renewal_amount'  => floatval( get_option( $this->prefix . 'custom_renewal_amount', 0 ) ),
             'created_at'             => get_option( $this->prefix . 'created_at', '' ),
+            'allow_deactivation'     => (bool) get_option( $this->prefix . 'allow_deactivation', 1 ),
             'time_remaining'         => $this->get_time_remaining(),
             'is_valid'               => $this->is_license_valid(),
             'is_grace_period'        => $this->is_in_grace_period(),
@@ -335,6 +342,7 @@ class DLMUES_License_Client {
             'injected_visitor_count',
             'custom_renewal_amount',
             'created_at',
+            'allow_deactivation',
         );
 
         foreach ( $options as $option ) {
