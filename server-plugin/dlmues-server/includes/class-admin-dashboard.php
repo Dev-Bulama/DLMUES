@@ -1039,11 +1039,11 @@ class DLMUES_Admin_Dashboard {
             </table>
 
             <!-- Edit license popup -->
-            <div id="dlmues-edit-popup-overlay" class="dlmues-popup-overlay" style="display:none;"></div>
-            <div id="dlmues-edit-license-popup" class="dlmues-site-health-popup" style="display:none;max-width:600px;">
+            <div id="dlmues-edit-popup-overlay" class="dlmues-popup-overlay"></div>
+            <div id="dlmues-edit-license-popup" class="dlmues-site-health-popup" style="max-width:600px;">
                 <div class="dlmues-popup-header">
                     <h3><?php esc_html_e( 'Edit License', 'dlmues-server' ); ?></h3>
-                    <button type="button" class="dlmues-popup-close" id="dlmues-edit-popup-close">&times;</button>
+                    <button type="button" id="dlmues-edit-popup-close">&times;</button>
                 </div>
                 <div class="dlmues-popup-body" style="padding:20px;">
                     <div class="dlmues-inline-edit-grid">

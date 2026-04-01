@@ -414,6 +414,17 @@ class DLMUES_Paystack {
                 // Generate invoice.
                 $invoice_manager = new DLMUES_Invoice_Manager();
                 $invoice_manager->generate_invoice( $payment_id );
+
+                // Increment coupon usage if a coupon was applied.
+                if ( ! empty( $metadata['coupon_id'] ) ) {
+                    $coupon_table = $wpdb->prefix . 'dlmues_coupons';
+                    $wpdb->query(
+                        $wpdb->prepare(
+                            "UPDATE {$coupon_table} SET used_count = used_count + 1 WHERE id = %d",
+                            absint( $metadata['coupon_id'] )
+                        )
+                    );
+                }
             }
         }
 

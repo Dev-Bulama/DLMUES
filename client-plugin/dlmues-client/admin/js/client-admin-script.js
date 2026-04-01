@@ -194,7 +194,7 @@
 
                     $.post( dlmuesClient.ajaxUrl, {
                         action: 'dlmues_verify_payment',
-                        nonce: dlmuesClient.nonce,
+                        nonce: ( typeof dlmuesPayment !== 'undefined' ? dlmuesPayment.nonce : dlmuesClient.nonce ),
                         reference: reference,
                     }, function ( response ) {
                         if ( response.success ) {

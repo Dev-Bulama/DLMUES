@@ -451,9 +451,10 @@ final class DLMUES_Client_Plugin {
             wp_send_json_error( array( 'message' => __( 'Unauthorized access.', 'dlmues-client' ) ) );
         }
 
-        $plan = isset( $_POST['plan'] ) ? sanitize_text_field( wp_unslash( $_POST['plan'] ) ) : '';
+        $plan        = isset( $_POST['plan'] ) ? sanitize_text_field( wp_unslash( $_POST['plan'] ) ) : '';
+        $coupon_code = isset( $_POST['coupon_code'] ) ? sanitize_text_field( wp_unslash( $_POST['coupon_code'] ) ) : '';
 
-        $result = $this->payment_handler->initiate_payment( $plan );
+        $result = $this->payment_handler->initiate_payment( $plan, $coupon_code );
 
         if ( is_wp_error( $result ) ) {
             wp_send_json_error( array( 'message' => $result->get_error_message() ) );

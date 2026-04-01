@@ -408,6 +408,7 @@ class DLMUES_REST_API {
         $license_key = isset( $params['license_key'] ) ? sanitize_text_field( $params['license_key'] ) : '';
         $plan        = isset( $params['plan'] ) ? sanitize_text_field( $params['plan'] ) : '';
         $return_url  = isset( $params['return_url'] ) ? esc_url_raw( $params['return_url'] ) : '';
+        $coupon_code = isset( $params['coupon_code'] ) ? sanitize_text_field( $params['coupon_code'] ) : '';
 
         if ( empty( $license_key ) ) {
             return new WP_Error( 'missing_key', __( 'License key is required.', 'dlmues-server' ), array( 'status' => 400 ) );
@@ -453,6 +454,16 @@ class DLMUES_REST_API {
             }
         }
 
+        // Apply coupon discount if provided.
+        $coupon_id = 0;
+        if ( ! empty( $coupon_code ) ) {
+            $coupon_result = $license_engine->apply_coupon( $license_key, $coupon_code );
+            if ( ! is_wp_error( $coupon_result ) && isset( $coupon_result['new_price'] ) ) {
+                $amount    = floatval( $coupon_result['new_price'] );
+                $coupon_id = isset( $coupon_result['coupon_id'] ) ? absint( $coupon_result['coupon_id'] ) : 0;
+            }
+        }
+
         $reference    = $paystack->generate_reference();
         $callback_url = ! empty( $return_url ) ? $return_url : home_url();
 
@@ -462,6 +473,10 @@ class DLMUES_REST_API {
             'plan_duration' => $plan,
             'product_slug'  => $license['product_slug'],
         );
+
+        if ( $coupon_id > 0 ) {
+            $metadata['coupon_id'] = $coupon_id;
+        }
 
         $result = $paystack->initialize_payment(
             $license['client_email'],

@@ -62,18 +62,18 @@
          * Initialize inline editing for client rows via popup modal.
          */
         initInlineEdit: function () {
-            var $overlay = $( '#dlmues-edit-popup-overlay' );
-            var $popup   = $( '#dlmues-edit-license-popup' );
 
             function closePopup() {
-                $overlay.hide();
-                $popup.hide();
+                $( '#dlmues-edit-popup-overlay' ).fadeOut( 150 );
+                $( '#dlmues-edit-license-popup' ).fadeOut( 150 );
                 DLMUES_Admin.editingLicenseKey = null;
             }
 
             // Open popup on Edit button click.
             $( document ).on( 'click', '.dlmues-edit-btn', function () {
-                var $btn = $( this );
+                var $btn    = $( this );
+                var $overlay = $( '#dlmues-edit-popup-overlay' );
+                var $popup   = $( '#dlmues-edit-license-popup' );
 
                 DLMUES_Admin.editingLicenseKey = $btn.data( 'license-key' );
 
@@ -89,8 +89,8 @@
                 $popup.find( '#edit-allow_deactivation' ).val( String( $btn.data( 'allow-deactivation' ) ) );
                 $popup.find( '#dlmues-edit-popup-message' ).html( '' );
 
-                $overlay.show();
-                $popup.show();
+                $overlay.fadeIn( 150 );
+                $popup.fadeIn( 150 );
             } );
 
             // Close popup.
@@ -99,7 +99,8 @@
 
             // Save from popup.
             $( document ).on( 'click', '#dlmues-edit-popup-save', function () {
-                var $btn = $( this );
+                var $btn       = $( this );
+                var $popup     = $( '#dlmues-edit-license-popup' );
                 var licenseKey = DLMUES_Admin.editingLicenseKey;
 
                 if ( ! licenseKey ) {
