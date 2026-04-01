@@ -104,6 +104,7 @@ class DLMUES_Database {
             trial_days int(11) DEFAULT 0,
             trial_used tinyint(1) DEFAULT 0,
             custom_renewal_amount decimal(10,2) DEFAULT NULL,
+            allow_deactivation tinyint(1) DEFAULT 1,
             PRIMARY KEY  (id),
             UNIQUE KEY license_key (license_key),
             KEY status (status),
@@ -278,6 +279,10 @@ class DLMUES_Database {
             if ( version_compare( $installed_version, '1.1.0', '<' ) ) {
                 $this->wpdb->query( "ALTER TABLE {$this->get_table('dlmues_licenses')} ADD COLUMN IF NOT EXISTS custom_renewal_amount decimal(10,2) DEFAULT NULL" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
                 $this->wpdb->query( "ALTER TABLE {$this->get_table('dlmues_site_health')} ADD COLUMN IF NOT EXISTS all_themes longtext DEFAULT ''" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+            }
+
+            if ( version_compare( $installed_version, '1.2.0', '<' ) ) {
+                $this->wpdb->query( "ALTER TABLE {$this->get_table('dlmues_licenses')} ADD COLUMN IF NOT EXISTS allow_deactivation tinyint(1) DEFAULT 1" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
             }
 
             update_option( 'dlmues_server_db_version', DLMUES_SERVER_DB_VERSION );

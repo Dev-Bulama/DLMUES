@@ -29,9 +29,9 @@
         },
 
         /**
-         * Stored inline edit rows (detached from table before DataTables init).
+         * Current license key being edited in the popup.
          */
-        editRows: null,
+        editingLicenseKey: null,
 
         /**
          * Initialize DataTables for enhanced table features.
@@ -41,7 +41,6 @@
                 $( '#dlmues-licenses-table' ).DataTable( {
                     order: [ [ 6, 'asc' ] ],
                     pageLength: 25,
-                    responsive: true,
                     language: {
                         search: dlmuesAdmin.strings.search || 'Search:',
                     },
@@ -49,14 +48,9 @@
             }
 
             if ( $.fn.DataTable && $( '#dlmues-clients-table' ).length ) {
-                // Detach inline edit rows BEFORE DataTables init to prevent column count mismatch (tn/18).
-                // DataTables counts td cells per row; colspan rows appear as 1-column rows causing the error.
-                DLMUES_Admin.editRows = $( '#dlmues-clients-table .dlmues-inline-edit-row' ).detach();
-
                 $( '#dlmues-clients-table' ).DataTable( {
                     order: [ [ 5, 'asc' ] ],
                     pageLength: 25,
-                    responsive: true,
                     columnDefs: [
                         { orderable: false, targets: [ -1 ] },
                     ],
@@ -65,55 +59,66 @@
         },
 
         /**
-         * Initialize inline editing for client rows.
+         * Initialize inline editing for client rows via popup modal.
          */
         initInlineEdit: function () {
-            // Open inline edit row (re-inserted after DataTables row).
-            $( document ).on( 'click', '.dlmues-edit-btn', function ( e ) {
-                e.preventDefault();
-                var $btn     = $( this );
-                var licenseKey = $btn.data( 'license-key' );
-                var editRowId  = 'dlmues-edit-' + licenseKey.replace( /[^a-zA-Z0-9]/g, '-' );
+            var $overlay = $( '#dlmues-edit-popup-overlay' );
+            var $popup   = $( '#dlmues-edit-license-popup' );
 
-                // Remove any currently open edit rows.
-                $( '.dlmues-active-edit-row' ).remove();
+            function closePopup() {
+                $overlay.hide();
+                $popup.hide();
+                DLMUES_Admin.editingLicenseKey = null;
+            }
 
-                // Find the matching stored edit row and clone it into the table.
-                if ( DLMUES_Admin.editRows ) {
-                    DLMUES_Admin.editRows.each( function () {
-                        if ( $( this ).attr( 'id' ) === editRowId ) {
-                            var $clone = $( this ).clone( true ).addClass( 'dlmues-active-edit-row' ).show();
-                            $btn.closest( 'tr' ).after( $clone );
-                        }
-                    } );
-                }
-            } );
-
-            // Cancel inline edit.
-            $( document ).on( 'click', '.dlmues-cancel-edit', function ( e ) {
-                e.preventDefault();
-                $( this ).closest( '.dlmues-active-edit-row' ).remove();
-            } );
-
-            // Save inline edit.
-            $( document ).on( 'click', '.dlmues-save-edit', function ( e ) {
-                e.preventDefault();
+            // Open popup on Edit button click.
+            $( document ).on( 'click', '.dlmues-edit-btn', function () {
                 var $btn = $( this );
-                var $row = $btn.closest( '.dlmues-inline-edit-row' );
-                var licenseKey = $btn.data( 'license-key' );
+
+                DLMUES_Admin.editingLicenseKey = $btn.data( 'license-key' );
+
+                // Populate all fields from data attributes.
+                $popup.find( '#edit-subscription_type' ).val( $btn.data( 'subscription-type' ) );
+                $popup.find( '#edit-price' ).val( $btn.data( 'price' ) );
+                $popup.find( '#edit-currency' ).val( $btn.data( 'currency' ) );
+                $popup.find( '#edit-grace_period_days' ).val( $btn.data( 'grace-period-days' ) );
+                $popup.find( '#edit-enforcement_mode' ).val( $btn.data( 'enforcement-mode' ) );
+                $popup.find( '#edit-notes' ).val( $btn.data( 'notes' ) );
+                $popup.find( '#edit-custom_renewal_amount' ).val( $btn.data( 'custom-renewal-amount' ) );
+                $popup.find( '#edit-expires_at' ).val( $btn.data( 'expires-at' ) );
+                $popup.find( '#edit-allow_deactivation' ).val( String( $btn.data( 'allow-deactivation' ) ) );
+                $popup.find( '#dlmues-edit-popup-message' ).html( '' );
+
+                $overlay.show();
+                $popup.show();
+            } );
+
+            // Close popup.
+            $( document ).on( 'click', '#dlmues-edit-popup-close, #dlmues-edit-popup-cancel', closePopup );
+            $( document ).on( 'click', '#dlmues-edit-popup-overlay', closePopup );
+
+            // Save from popup.
+            $( document ).on( 'click', '#dlmues-edit-popup-save', function () {
+                var $btn = $( this );
+                var licenseKey = DLMUES_Admin.editingLicenseKey;
+
+                if ( ! licenseKey ) {
+                    return;
+                }
 
                 var data = {
                     action: 'dlmues_update_license',
                     nonce: dlmuesAdmin.nonce,
                     license_key: licenseKey,
-                    subscription_type: $row.find( '[name="subscription_type"]' ).val(),
-                    price: $row.find( '[name="price"]' ).val(),
-                    currency: $row.find( '[name="currency"]' ).val(),
-                    grace_period_days: $row.find( '[name="grace_period_days"]' ).val(),
-                    enforcement_mode: $row.find( '[name="enforcement_mode"]' ).val(),
-                    notes: $row.find( '[name="notes"]' ).val(),
-                    custom_renewal_amount: $row.find( '[name="custom_renewal_amount"]' ).val(),
-                    expires_at: $row.find( '[name="expires_at"]' ).val(),
+                    subscription_type: $popup.find( '#edit-subscription_type' ).val(),
+                    price: $popup.find( '#edit-price' ).val(),
+                    currency: $popup.find( '#edit-currency' ).val(),
+                    grace_period_days: $popup.find( '#edit-grace_period_days' ).val(),
+                    enforcement_mode: $popup.find( '#edit-enforcement_mode' ).val(),
+                    notes: $popup.find( '#edit-notes' ).val(),
+                    custom_renewal_amount: $popup.find( '#edit-custom_renewal_amount' ).val(),
+                    expires_at: $popup.find( '#edit-expires_at' ).val(),
+                    allow_deactivation: $popup.find( '#edit-allow_deactivation' ).val(),
                 };
 
                 $btn.prop( 'disabled', true ).text( 'Saving...' );
@@ -121,13 +126,16 @@
                 $.post( dlmuesAdmin.ajaxUrl, data, function ( response ) {
                     if ( response.success ) {
                         DLMUES_Admin.showNotice( response.data.message, 'success' );
-                        $row.hide();
                         setTimeout( function () { location.reload(); }, 800 );
                     } else {
-                        DLMUES_Admin.showNotice( response.data.message || dlmuesAdmin.strings.error, 'error' );
+                        $popup.find( '#dlmues-edit-popup-message' ).html(
+                            '<p style="color:red;">' + ( response.data.message || dlmuesAdmin.strings.error ) + '</p>'
+                        );
                     }
                 } ).fail( function () {
-                    DLMUES_Admin.showNotice( dlmuesAdmin.strings.error, 'error' );
+                    $popup.find( '#dlmues-edit-popup-message' ).html(
+                        '<p style="color:red;">' + dlmuesAdmin.strings.error + '</p>'
+                    );
                 } ).always( function () {
                     $btn.prop( 'disabled', false ).text( 'Save Changes' );
                 } );

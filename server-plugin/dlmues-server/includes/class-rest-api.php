@@ -239,6 +239,7 @@ class DLMUES_REST_API {
             'injected_visitor_count' => absint( $license['injected_visitor_count'] ),
             'custom_renewal_amount'  => ! empty( $license['custom_renewal_amount'] ) ? floatval( $license['custom_renewal_amount'] ) : null,
             'created_at'             => $license['created_at'],
+            'allow_deactivation'     => isset( $license['allow_deactivation'] ) ? (bool) $license['allow_deactivation'] : true,
         );
 
         if ( isset( $result['grace_days_remaining'] ) ) {

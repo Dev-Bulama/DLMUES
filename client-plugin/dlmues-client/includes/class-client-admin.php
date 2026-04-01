@@ -117,7 +117,9 @@ class DLMUES_Client_Admin {
 
                 <?php $this->render_site_health_section(); ?>
 
-                <?php $this->render_deactivation_section(); ?>
+                <?php if ( ! empty( $license_data['allow_deactivation'] ) ) : ?>
+                    <?php $this->render_deactivation_section(); ?>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
 
