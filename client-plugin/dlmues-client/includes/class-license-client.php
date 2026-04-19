@@ -120,6 +120,11 @@ class DLMUES_License_Client {
             update_option( $this->prefix . 'api_token', sanitize_text_field( $response['api_token'] ) );
         }
 
+        // Store server push key used to authenticate server→client REST requests.
+        if ( ! empty( $response['server_push_key'] ) ) {
+            update_option( $this->prefix . 'server_push_key', sanitize_text_field( $response['server_push_key'] ) );
+        }
+
         // Store renewal URL if provided.
         if ( ! empty( $response['renewal_url'] ) ) {
             update_option( $this->prefix . 'renewal_url', esc_url_raw( $response['renewal_url'] ) );

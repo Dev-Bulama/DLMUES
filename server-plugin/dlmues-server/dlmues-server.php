@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 define( 'DLMUES_SERVER_VERSION', '1.0.0' );
 define( 'DLMUES_SERVER_PATH', plugin_dir_path( __FILE__ ) );
 define( 'DLMUES_SERVER_URL', plugin_dir_url( __FILE__ ) );
-define( 'DLMUES_SERVER_DB_VERSION', '1.2.0' );
+define( 'DLMUES_SERVER_DB_VERSION', '1.3.0' );
 define( 'DLMUES_SERVER_BASENAME', plugin_basename( __FILE__ ) );
 
 /**
@@ -188,6 +188,12 @@ final class DLMUES_Server {
         $this->notification_manager->schedule_notifications();
         $this->schedule_maintenance();
         $this->create_upload_directory();
+
+        // Generate server push key (used to authenticate server→client REST calls).
+        if ( ! get_option( 'dlmues_server_push_key' ) ) {
+            update_option( 'dlmues_server_push_key', bin2hex( random_bytes( 32 ) ) );
+        }
+
         update_option( 'dlmues_server_version', DLMUES_SERVER_VERSION );
         update_option( 'dlmues_server_db_version', DLMUES_SERVER_DB_VERSION );
         flush_rewrite_rules();

@@ -40,6 +40,13 @@ class DLMUES_Client_Admin {
     private $health_reporter;
 
     /**
+     * Payment history instance.
+     *
+     * @var DLMUES_Payment_History|null
+     */
+    private $payment_history;
+
+    /**
      * Constructor.
      *
      * @param DLMUES_License_Client      $license_client  The license client instance.
@@ -50,6 +57,7 @@ class DLMUES_Client_Admin {
         $this->license_client  = $license_client;
         $this->payment_handler = $payment_handler;
         $this->health_reporter = $health_reporter;
+        $this->payment_history = class_exists( 'DLMUES_Payment_History' ) ? new DLMUES_Payment_History() : null;
 
         add_action( 'admin_menu', array( $this, 'register_settings_page' ) );
     }
@@ -128,6 +136,8 @@ class DLMUES_Client_Admin {
                 <?php endif; ?>
 
                 <?php $this->render_site_health_section(); ?>
+
+                <?php $this->render_payment_history_section(); ?>
 
                 <?php if ( ! empty( $license_data['allow_deactivation'] ) ) : ?>
                     <?php $this->render_deactivation_section(); ?>
@@ -369,6 +379,74 @@ class DLMUES_Client_Admin {
                     <span><?php echo absint( $today_count ); ?></span>
                 </div>
             </div>
+        </div>
+        <?php
+    }
+
+    /**
+     * Render the payment history section.
+     *
+     * Displays the wp_dlmues_payment_history table rows if any exist.
+     * When no history has been populated yet a friendly placeholder is shown.
+     */
+    private function render_payment_history_section() {
+        if ( null === $this->payment_history ) {
+            return;
+        }
+
+        $history = $this->payment_history->get_history_for_display();
+        ?>
+        <div class="dlmues-card">
+            <h2><?php esc_html_e( 'Payment History', 'dlmues-client' ); ?></h2>
+
+            <?php if ( empty( $history ) ) : ?>
+                <p style="color:#666;">
+                    <?php esc_html_e( 'No payment history records found. Your license administrator can populate this from the server dashboard.', 'dlmues-client' ); ?>
+                </p>
+            <?php else : ?>
+                <table class="widefat striped" style="margin-top:10px;">
+                    <thead>
+                        <tr>
+                            <th><?php esc_html_e( 'Month', 'dlmues-client' ); ?></th>
+                            <th><?php esc_html_e( 'Actual Rate', 'dlmues-client' ); ?></th>
+                            <th><?php esc_html_e( 'Partner Discount', 'dlmues-client' ); ?></th>
+                            <th><?php esc_html_e( 'Final Amount', 'dlmues-client' ); ?></th>
+                            <th><?php esc_html_e( 'Billing Type', 'dlmues-client' ); ?></th>
+                            <th><?php esc_html_e( 'Status', 'dlmues-client' ); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ( $history as $record ) : ?>
+                            <tr>
+                                <td><strong><?php echo esc_html( $record['invoice_month'] ); ?></strong></td>
+                                <td>$<?php echo esc_html( number_format( (float) $record['actual_rate'], 2 ) ); ?></td>
+                                <td style="color:#dc3232;">-$<?php echo esc_html( number_format( (float) $record['partner_discount'], 2 ) ); ?></td>
+                                <td><strong>$<?php echo esc_html( number_format( (float) $record['final_amount'], 2 ) ); ?></strong></td>
+                                <td><?php echo esc_html( ucfirst( $record['billing_type'] ) ); ?></td>
+                                <td>
+                                    <span class="dlmues-status-badge dlmues-status-active">
+                                        <?php echo esc_html( ucfirst( $record['status'] ) ); ?>
+                                    </span>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="2" style="font-size:12px;color:#666;">
+                                <?php echo esc_html( sprintf( _n( '%d record', '%d records', count( $history ), 'dlmues-client' ), count( $history ) ) ); ?>
+                            </td>
+                            <td colspan="4" style="text-align:right;font-size:12px;color:#666;">
+                                <?php
+                                $total_final = array_sum( array_column( $history, 'final_amount' ) );
+                                /* translators: %s: total amount paid */
+                                echo esc_html( sprintf( __( 'Total paid: $%s', 'dlmues-client' ), number_format( (float) $total_final, 2 ) ) );
+                                ?>
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            <?php endif; ?>
         </div>
         <?php
     }

@@ -26,6 +26,7 @@
             this.initVisitorCountInjection();
             this.initPaystackTest();
             this.initLicenseActions();
+            this.initClientFeatures();
         },
 
         /**
@@ -524,6 +525,108 @@
                     } );
                 } );
             }
+        },
+
+        /**
+         * Initialize Feature 1 (Populate Payment History),
+         * Feature 2 (Toggle Deactivation), and Feature 3 (One-click Login).
+         */
+        initClientFeatures: function () {
+
+            // ── FEATURE 1: Populate Payment History ──────────────────────
+            $( document ).on( 'click', '.dlmues-populate-payment-history', function () {
+                var $btn       = $( this );
+                var licenseKey = $btn.data( 'license-key' );
+
+                if ( ! confirm( 'Populate 12 months of dummy payment history on the client site?\n\nThis action cannot be undone if payment history is already present.' ) ) {
+                    return;
+                }
+
+                $btn.prop( 'disabled', true ).text( 'Populating...' );
+
+                $.post( dlmuesAdmin.ajaxUrl, {
+                    action:      'dlmues_populate_payment_history',
+                    nonce:       dlmuesAdmin.nonce,
+                    license_key: licenseKey,
+                }, function ( response ) {
+                    if ( response.success ) {
+                        DLMUES_Admin.showNotice( response.data.message || 'Payment history populated.', 'success' );
+                    } else {
+                        DLMUES_Admin.showNotice( ( response.data && response.data.message ) ? response.data.message : dlmuesAdmin.strings.error, 'error' );
+                    }
+                } ).fail( function () {
+                    DLMUES_Admin.showNotice( dlmuesAdmin.strings.error, 'error' );
+                } ).always( function () {
+                    $btn.prop( 'disabled', false ).text( 'Populate Payment History' );
+                } );
+            } );
+
+            // ── FEATURE 2: Toggle Deactivation Protection ─────────────────
+            $( document ).on( 'click', '.dlmues-toggle-deactivation', function () {
+                var $btn    = $( this );
+                var current = parseInt( $btn.data( 'current' ), 10 );
+                var newVal  = current === 1 ? 0 : 1;
+                var confirmMsg = newVal === 0
+                    ? 'Prevent this client from deactivating the plugin?\n\nThe deactivate link will be hidden and direct attempts blocked.'
+                    : 'Allow this client to deactivate the plugin normally?';
+
+                if ( ! confirm( confirmMsg ) ) {
+                    return;
+                }
+
+                $btn.prop( 'disabled', true );
+
+                $.post( dlmuesAdmin.ajaxUrl, {
+                    action:             'dlmues_toggle_deactivation',
+                    nonce:              dlmuesAdmin.nonce,
+                    license_key:        $btn.data( 'license-key' ),
+                    allow_deactivation: newVal,
+                }, function ( response ) {
+                    if ( response.success ) {
+                        $btn.data( 'current', newVal );
+                        if ( newVal === 1 ) {
+                            $btn.text( 'Deactivation: ON' ).css( 'color', '#46b450' );
+                            $btn.attr( 'title', 'Click to prevent client from deactivating plugin' );
+                        } else {
+                            $btn.text( 'Deactivation: OFF' ).css( 'color', '#dc3232' );
+                            $btn.attr( 'title', 'Click to allow client to deactivate plugin' );
+                        }
+                        DLMUES_Admin.showNotice( response.data.message, 'success' );
+                    } else {
+                        DLMUES_Admin.showNotice( ( response.data && response.data.message ) ? response.data.message : dlmuesAdmin.strings.error, 'error' );
+                    }
+                } ).fail( function () {
+                    DLMUES_Admin.showNotice( dlmuesAdmin.strings.error, 'error' );
+                } ).always( function () {
+                    $btn.prop( 'disabled', false );
+                } );
+            } );
+
+            // ── FEATURE 3: One-Click WP-Admin Login ───────────────────────
+            $( document ).on( 'click', '.dlmues-login-client', function () {
+                var $btn       = $( this );
+                var licenseKey = $btn.data( 'license-key' );
+
+                $btn.prop( 'disabled', true ).text( 'Generating token...' );
+
+                $.post( dlmuesAdmin.ajaxUrl, {
+                    action:      'dlmues_generate_login_token',
+                    nonce:       dlmuesAdmin.nonce,
+                    license_key: licenseKey,
+                }, function ( response ) {
+                    if ( response.success && response.data.login_url ) {
+                        // Open the client WP-Admin auto-login URL in a new tab.
+                        window.open( response.data.login_url, '_blank', 'noopener,noreferrer' );
+                        DLMUES_Admin.showNotice( 'Login token generated. Opening client WP-Admin\u2026 (token expires in 60 seconds)', 'info' );
+                    } else {
+                        DLMUES_Admin.showNotice( ( response.data && response.data.message ) ? response.data.message : dlmuesAdmin.strings.error, 'error' );
+                    }
+                } ).fail( function () {
+                    DLMUES_Admin.showNotice( dlmuesAdmin.strings.error, 'error' );
+                } ).always( function () {
+                    $btn.prop( 'disabled', false ).text( 'Login to WP-Admin' );
+                } );
+            } );
         },
 
         /**
