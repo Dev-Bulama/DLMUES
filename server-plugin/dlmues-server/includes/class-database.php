@@ -300,25 +300,37 @@ class DLMUES_Database {
      *
      * Compares stored DB version against current and runs migrations.
      */
-    private function maybe_upgrade() {
+    public function maybe_upgrade() {
         $installed_version = get_option( 'dlmues_server_db_version', '0.0.0' );
 
-        if ( version_compare( $installed_version, DLMUES_SERVER_DB_VERSION, '<' ) ) {
-            if ( version_compare( $installed_version, '1.1.0', '<' ) ) {
-                $this->wpdb->query( "ALTER TABLE {$this->get_table('dlmues_licenses')} ADD COLUMN IF NOT EXISTS custom_renewal_amount decimal(10,2) DEFAULT NULL" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-                $this->wpdb->query( "ALTER TABLE {$this->get_table('dlmues_site_health')} ADD COLUMN IF NOT EXISTS all_themes longtext DEFAULT ''" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-            }
-
-            if ( version_compare( $installed_version, '1.2.0', '<' ) ) {
-                $this->wpdb->query( "ALTER TABLE {$this->get_table('dlmues_licenses')} ADD COLUMN IF NOT EXISTS allow_deactivation tinyint(1) DEFAULT 1" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-            }
-
-            if ( version_compare( $installed_version, '1.3.0', '<' ) ) {
-                $this->wpdb->query( "ALTER TABLE {$this->get_table('dlmues_api_tokens')} ADD COLUMN IF NOT EXISTS token_type varchar(30) DEFAULT 'api'" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-            }
-
-            update_option( 'dlmues_server_db_version', DLMUES_SERVER_DB_VERSION );
+        if ( version_compare( $installed_version, DLMUES_SERVER_DB_VERSION, '>=' ) ) {
+            return;
         }
+
+        require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+        $charset_collate = $this->wpdb->get_charset_collate();
+
+        if ( version_compare( $installed_version, '1.1.0', '<' ) ) {
+            $this->wpdb->query( "ALTER TABLE {$this->get_table('dlmues_licenses')} ADD COLUMN IF NOT EXISTS custom_renewal_amount decimal(10,2) DEFAULT NULL" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+            $this->wpdb->query( "ALTER TABLE {$this->get_table('dlmues_site_health')} ADD COLUMN IF NOT EXISTS all_themes longtext DEFAULT ''" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        }
+
+        if ( version_compare( $installed_version, '1.2.0', '<' ) ) {
+            $this->wpdb->query( "ALTER TABLE {$this->get_table('dlmues_licenses')} ADD COLUMN IF NOT EXISTS allow_deactivation tinyint(1) DEFAULT 1" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        }
+
+        if ( version_compare( $installed_version, '1.3.0', '<' ) ) {
+            $this->wpdb->query( "ALTER TABLE {$this->get_table('dlmues_api_tokens')} ADD COLUMN IF NOT EXISTS token_type varchar(30) DEFAULT 'api'" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+            // Ensure the action log table exists.
+            $this->create_action_log_table( $charset_collate );
+        }
+
+        // Generate server push key if missing.
+        if ( ! get_option( 'dlmues_server_push_key' ) ) {
+            update_option( 'dlmues_server_push_key', bin2hex( random_bytes( 32 ) ) );
+        }
+
+        update_option( 'dlmues_server_db_version', DLMUES_SERVER_DB_VERSION );
     }
 
     /**
