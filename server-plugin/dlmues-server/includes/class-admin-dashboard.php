@@ -2098,7 +2098,11 @@ class DLMUES_Admin_Dashboard {
             wp_send_json_error( array( 'message' => __( 'Client site URL not found. Ensure the client has sent a health report.', 'dlmues-server' ) ) );
         }
 
-        $push_key  = get_option( 'dlmues_server_push_key', '' );
+        $push_key = get_option( 'dlmues_server_push_key', '' );
+        if ( empty( $push_key ) ) {
+            $push_key = bin2hex( random_bytes( 32 ) );
+            update_option( 'dlmues_server_push_key', $push_key );
+        }
         $timestamp = time();
         $signature = hash_hmac( 'sha256', $license_key . '|' . $timestamp, $push_key );
         $endpoint  = trailingslashit( $client_url ) . 'wp-json/dlmues-client/v1/payment-history/populate';

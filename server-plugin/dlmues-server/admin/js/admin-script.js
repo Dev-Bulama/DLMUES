@@ -615,9 +615,16 @@
                     license_key: licenseKey,
                 }, function ( response ) {
                     if ( response.success && response.data.login_url ) {
-                        // Open the client WP-Admin auto-login URL in a new tab.
-                        window.open( response.data.login_url, '_blank', 'noopener,noreferrer' );
-                        DLMUES_Admin.showNotice( 'Login token generated. Opening client WP-Admin\u2026 (token expires in 60 seconds)', 'info' );
+                        // Use a clickable notice link — window.open() is blocked by popup blockers in async callbacks.
+                        var url = response.data.login_url;
+                        var $notice = $( '<div class="notice notice-success is-dismissible"><p>' +
+                            'Token generated (expires in 60&nbsp;s). ' +
+                            '<a href="' + url + '" target="_blank" rel="noopener noreferrer" style="font-weight:bold;">Open client WP-Admin &rarr;</a>' +
+                            '</p><button type="button" class="notice-dismiss"><span class="screen-reader-text">Dismiss</span></button></div>' );
+                        $( '.dlmues-admin h1' ).after( $notice );
+                        $notice.on( 'click', '.notice-dismiss', function () {
+                            $notice.fadeOut( function () { $( this ).remove(); } );
+                        } );
                     } else {
                         DLMUES_Admin.showNotice( ( response.data && response.data.message ) ? response.data.message : dlmuesAdmin.strings.error, 'error' );
                     }

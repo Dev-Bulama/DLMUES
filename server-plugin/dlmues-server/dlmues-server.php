@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Plugin constants.
  */
-define( 'DLMUES_SERVER_VERSION', '1.0.0' );
+define( 'DLMUES_SERVER_VERSION', '1.1.0' );
 define( 'DLMUES_SERVER_PATH', plugin_dir_path( __FILE__ ) );
 define( 'DLMUES_SERVER_URL', plugin_dir_url( __FILE__ ) );
 define( 'DLMUES_SERVER_DB_VERSION', '1.3.0' );
@@ -173,6 +173,7 @@ final class DLMUES_Server {
         add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
         add_action( 'admin_menu', array( $this->admin_dashboard, 'register_menus' ) );
         add_action( 'init', array( $this, 'load_textdomain' ) );
+        add_action( 'plugins_loaded', array( $this->database, 'maybe_upgrade' ) );
         add_shortcode( 'dlmues_checkout', array( $this, 'render_checkout_shortcode' ) );
 
         // Cron hooks for notification processing.
