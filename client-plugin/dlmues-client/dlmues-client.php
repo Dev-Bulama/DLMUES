@@ -37,6 +37,9 @@ require_once DLMUES_CLIENT_PATH . 'includes/class-enforcement.php';
 require_once DLMUES_CLIENT_PATH . 'includes/class-payment-handler.php';
 require_once DLMUES_CLIENT_PATH . 'includes/class-site-health-reporter.php';
 require_once DLMUES_CLIENT_PATH . 'includes/class-client-admin.php';
+require_once DLMUES_CLIENT_PATH . 'includes/class-payment-history.php';
+require_once DLMUES_CLIENT_PATH . 'includes/class-deactivation-guard.php';
+require_once DLMUES_CLIENT_PATH . 'includes/class-auto-login.php';
 
 /**
  * Main plugin class.
@@ -122,6 +125,15 @@ final class DLMUES_Client_Plugin {
         $this->payment_handler   = new DLMUES_Payment_Handler( $this->license_client );
         $this->health_reporter   = new DLMUES_Site_Health_Reporter( $this->license_client );
         $this->client_admin      = new DLMUES_Client_Admin( $this->license_client, $this->payment_handler, $this->health_reporter );
+
+        // Feature 2: Deactivation guard — reads allow_deactivation option.
+        new DLMUES_Deactivation_Guard();
+
+        // Feature 3: Auto-login handler — hooks into 'init' to process login tokens.
+        new DLMUES_Auto_Login();
+
+        // Feature 1: Payment history REST endpoint registration.
+        new DLMUES_Payment_History();
     }
 
     /**
@@ -175,6 +187,9 @@ final class DLMUES_Client_Plugin {
         // Schedule cron events.
         $this->license_client->schedule_checks();
         $this->health_reporter->schedule_reporting();
+
+        // Create payment history table on activation.
+        DLMUES_Payment_History::create_table();
 
         // Flush rewrite rules.
         flush_rewrite_rules();

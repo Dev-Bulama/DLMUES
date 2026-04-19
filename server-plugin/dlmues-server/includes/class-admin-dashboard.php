@@ -33,8 +33,11 @@ class DLMUES_Admin_Dashboard {
         add_action( 'wp_ajax_dlmues_get_invoice',          array( $this, 'ajax_get_invoice' ) );
         add_action( 'wp_ajax_dlmues_send_reminder',        array( $this, 'ajax_send_reminder' ) );
         add_action( 'wp_ajax_dlmues_create_trial',         array( $this, 'ajax_create_trial' ) );
-        add_action( 'wp_ajax_dlmues_test_paystack',           array( $this, 'ajax_test_paystack' ) );
-        add_action( 'wp_ajax_dlmues_admin_verify_payment',    array( $this, 'ajax_admin_verify_payment' ) );
+        add_action( 'wp_ajax_dlmues_test_paystack',              array( $this, 'ajax_test_paystack' ) );
+        add_action( 'wp_ajax_dlmues_admin_verify_payment',       array( $this, 'ajax_admin_verify_payment' ) );
+        add_action( 'wp_ajax_dlmues_populate_payment_history',   array( $this, 'ajax_populate_payment_history' ) );
+        add_action( 'wp_ajax_dlmues_toggle_deactivation',        array( $this, 'ajax_toggle_deactivation' ) );
+        add_action( 'wp_ajax_dlmues_generate_login_token',       array( $this, 'ajax_generate_login_token' ) );
     }
 
     /**
@@ -1089,6 +1092,40 @@ class DLMUES_Admin_Dashboard {
                                             <button type="button" class="button button-small dlmues-quick-reactivate" data-license-key="<?php echo esc_attr( $client['license_key'] ); ?>"><?php esc_html_e( 'Reactivate', 'dlmues-server' ); ?></button>
                                         <?php endif; ?>
                                         <button type="button" class="button button-small dlmues-send-reminder" data-license-key="<?php echo esc_attr( $client['license_key'] ); ?>"><?php esc_html_e( 'Remind', 'dlmues-server' ); ?></button>
+
+                                        <?php
+                                        // Feature 1 — Populate Payment History button.
+                                        ?>
+                                        <button type="button"
+                                            class="button button-small dlmues-populate-payment-history"
+                                            data-license-key="<?php echo esc_attr( $client['license_key'] ); ?>"
+                                            title="<?php esc_attr_e( 'Push 12 months of dummy payment history to client site', 'dlmues-server' ); ?>"
+                                        ><?php esc_html_e( 'Populate Payment History', 'dlmues-server' ); ?></button>
+
+                                        <?php
+                                        // Feature 2 — Prevent Deactivation toggle.
+                                        $allow = isset( $client['allow_deactivation'] ) ? (int) $client['allow_deactivation'] : 1;
+                                        $deact_label = $allow
+                                            ? esc_html__( 'Deactivation: ON', 'dlmues-server' )
+                                            : esc_html__( 'Deactivation: OFF', 'dlmues-server' );
+                                        $deact_color = $allow ? '#46b450' : '#dc3232';
+                                        ?>
+                                        <button type="button"
+                                            class="button button-small dlmues-toggle-deactivation"
+                                            data-license-key="<?php echo esc_attr( $client['license_key'] ); ?>"
+                                            data-current="<?php echo esc_attr( $allow ); ?>"
+                                            style="color:<?php echo esc_attr( $deact_color ); ?>;font-weight:bold;"
+                                            title="<?php echo $allow ? esc_attr__( 'Click to prevent client from deactivating plugin', 'dlmues-server' ) : esc_attr__( 'Click to allow client to deactivate plugin', 'dlmues-server' ); ?>"
+                                        ><?php echo esc_html( $deact_label ); ?></button>
+
+                                        <?php
+                                        // Feature 3 — One-click WP-Admin login.
+                                        ?>
+                                        <button type="button"
+                                            class="button button-small dlmues-login-client"
+                                            data-license-key="<?php echo esc_attr( $client['license_key'] ); ?>"
+                                            title="<?php esc_attr_e( 'Generate a 60-second login token and open client WP-Admin', 'dlmues-server' ); ?>"
+                                        ><?php esc_html_e( 'Login to WP-Admin', 'dlmues-server' ); ?></button>
                                     </div>
                                 </td>
                             </tr>
@@ -2027,5 +2064,247 @@ class DLMUES_Admin_Dashboard {
         wp_send_json_success( array(
             'message' => __( 'Payment verified and license renewed successfully.', 'dlmues-server' ),
         ) );
+    }
+
+    /* =================================================================
+     *  FEATURE 1 — POPULATE PAYMENT HISTORY
+     * ================================================================= */
+
+    /**
+     * AJAX: Push 12 months of dummy payment history to the client site.
+     */
+    public function ajax_populate_payment_history() {
+        check_ajax_referer( 'dlmues_admin_nonce', 'nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => __( 'Unauthorized.', 'dlmues-server' ) ) );
+        }
+
+        $license_key = isset( $_POST['license_key'] ) ? sanitize_text_field( wp_unslash( $_POST['license_key'] ) ) : '';
+
+        if ( empty( $license_key ) ) {
+            wp_send_json_error( array( 'message' => __( 'License key is required.', 'dlmues-server' ) ) );
+        }
+
+        $license_engine = new DLMUES_License_Engine();
+        $license        = $license_engine->get_license( $license_key );
+
+        if ( ! $license ) {
+            wp_send_json_error( array( 'message' => __( 'License not found.', 'dlmues-server' ) ) );
+        }
+
+        $client_url = $this->get_client_site_url( $license );
+        if ( empty( $client_url ) ) {
+            wp_send_json_error( array( 'message' => __( 'Client site URL not found. Ensure the client has sent a health report.', 'dlmues-server' ) ) );
+        }
+
+        $push_key  = get_option( 'dlmues_server_push_key', '' );
+        $timestamp = time();
+        $signature = hash_hmac( 'sha256', $license_key . '|' . $timestamp, $push_key );
+        $endpoint  = trailingslashit( $client_url ) . 'wp-json/dlmues-client/v1/payment-history/populate';
+
+        $response = wp_remote_post( $endpoint, array(
+            'timeout'   => 30,
+            'sslverify' => false,
+            'headers'   => array(
+                'Content-Type'       => 'application/json',
+                'X-DLMUES-Timestamp' => (string) $timestamp,
+                'X-DLMUES-Signature' => $signature,
+            ),
+            'body'      => wp_json_encode( array( 'license_key' => $license_key ) ),
+        ) );
+
+        if ( is_wp_error( $response ) ) {
+            wp_send_json_error( array( 'message' => $response->get_error_message() ) );
+        }
+
+        $code = wp_remote_retrieve_response_code( $response );
+        $body = json_decode( wp_remote_retrieve_body( $response ), true );
+
+        if ( 401 === $code ) {
+            wp_send_json_error( array( 'message' => __( 'Authentication failed. Client may need to re-activate the license.', 'dlmues-server' ) ) );
+        }
+
+        if ( ! empty( $body['success'] ) ) {
+            $this->log_admin_action( $license_key, 'populate_payment_history', 'Success: ' . $client_url );
+            wp_send_json_success( array( 'message' => isset( $body['message'] ) ? sanitize_text_field( $body['message'] ) : __( 'Payment history populated successfully.', 'dlmues-server' ) ) );
+        }
+
+        // Success = false means history already exists.
+        $msg = isset( $body['message'] ) ? sanitize_text_field( $body['message'] ) : __( 'Failed to populate payment history.', 'dlmues-server' );
+        wp_send_json_error( array( 'message' => $msg ) );
+    }
+
+    /* =================================================================
+     *  FEATURE 2 — TOGGLE DEACTIVATION PROTECTION
+     * ================================================================= */
+
+    /**
+     * AJAX: Toggle client plugin deactivation protection for a license.
+     */
+    public function ajax_toggle_deactivation() {
+        check_ajax_referer( 'dlmues_admin_nonce', 'nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => __( 'Unauthorized.', 'dlmues-server' ) ) );
+        }
+
+        $license_key       = isset( $_POST['license_key'] )       ? sanitize_text_field( wp_unslash( $_POST['license_key'] ) ) : '';
+        $allow_deactivation = isset( $_POST['allow_deactivation'] ) ? absint( $_POST['allow_deactivation'] ) : 1;
+
+        if ( empty( $license_key ) ) {
+            wp_send_json_error( array( 'message' => __( 'License key is required.', 'dlmues-server' ) ) );
+        }
+
+        global $wpdb;
+        $result = $wpdb->update(
+            $wpdb->prefix . 'dlmues_licenses',
+            array( 'allow_deactivation' => $allow_deactivation ),
+            array( 'license_key' => $license_key ),
+            array( '%d' ),
+            array( '%s' )
+        );
+
+        if ( false === $result ) {
+            wp_send_json_error( array( 'message' => __( 'Failed to update setting.', 'dlmues-server' ) ) );
+        }
+
+        $detail = $allow_deactivation ? 'allow_deactivation set to ON' : 'allow_deactivation set to OFF (prevention active)';
+        $this->log_admin_action( $license_key, 'toggle_deactivation', $detail );
+
+        $msg = $allow_deactivation
+            ? __( 'Client can now deactivate the plugin.', 'dlmues-server' )
+            : __( 'Plugin deactivation is now prevented on the client site.', 'dlmues-server' );
+
+        wp_send_json_success( array( 'message' => $msg, 'new_value' => $allow_deactivation ) );
+    }
+
+    /* =================================================================
+     *  FEATURE 3 — ONE-CLICK WP-ADMIN LOGIN
+     * ================================================================= */
+
+    /**
+     * AJAX: Generate a 60-second single-use login token for a client site.
+     */
+    public function ajax_generate_login_token() {
+        check_ajax_referer( 'dlmues_admin_nonce', 'nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => __( 'Unauthorized.', 'dlmues-server' ) ) );
+        }
+
+        $license_key = isset( $_POST['license_key'] ) ? sanitize_text_field( wp_unslash( $_POST['license_key'] ) ) : '';
+
+        if ( empty( $license_key ) ) {
+            wp_send_json_error( array( 'message' => __( 'License key is required.', 'dlmues-server' ) ) );
+        }
+
+        $license_engine = new DLMUES_License_Engine();
+        $license        = $license_engine->get_license( $license_key );
+
+        if ( ! $license ) {
+            wp_send_json_error( array( 'message' => __( 'License not found.', 'dlmues-server' ) ) );
+        }
+
+        $client_url = $this->get_client_site_url( $license );
+        if ( empty( $client_url ) ) {
+            wp_send_json_error( array( 'message' => __( 'Client site URL not found. Ensure the client has sent a health report.', 'dlmues-server' ) ) );
+        }
+
+        // Generate cryptographically secure token.
+        $security  = new DLMUES_Security();
+        $raw_token = $security->generate_api_token();
+
+        global $wpdb;
+        $wpdb->insert(
+            $wpdb->prefix . 'dlmues_api_tokens',
+            array(
+                'token_hash' => $security->hash_token( $raw_token ),
+                'license_id' => absint( $license['id'] ),
+                'created_at' => current_time( 'mysql' ),
+                'expires_at' => gmdate( 'Y-m-d H:i:s', time() + 60 ),
+                'token_type' => 'login',
+            ),
+            array( '%s', '%d', '%s', '%s', '%s' )
+        );
+
+        // Build the client auto-login URL.
+        $login_url = add_query_arg(
+            array(
+                'dlmues_auto_login' => rawurlencode( $raw_token ),
+                'dlmues_key'        => rawurlencode( $license_key ),
+            ),
+            trailingslashit( $client_url )
+        );
+
+        $this->log_admin_action( $license_key, 'generate_login_token', 'Token generated for ' . $client_url . ' by user #' . get_current_user_id() );
+
+        wp_send_json_success( array( 'login_url' => $login_url ) );
+    }
+
+    /* =================================================================
+     *  SHARED HELPERS
+     * ================================================================= */
+
+    /**
+     * Resolve the base URL of a client site from health data or domain.
+     *
+     * @param array $license License row from database.
+     * @return string Trailing-slashed URL or empty string on failure.
+     */
+    private function get_client_site_url( $license ) {
+        global $wpdb;
+
+        // Prefer the site_url sent by the client health reporter.
+        $site_url = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT site_url FROM {$wpdb->prefix}dlmues_site_health WHERE license_id = %d",
+                absint( $license['id'] )
+            )
+        );
+
+        if ( ! empty( $site_url ) ) {
+            return trailingslashit( esc_url_raw( $site_url ) );
+        }
+
+        // Fall back to constructing from stored domain.
+        if ( ! empty( $license['client_domain'] ) ) {
+            $domain = trim( $license['client_domain'] );
+            if ( 0 !== strpos( $domain, 'http' ) ) {
+                $domain = 'https://' . $domain;
+            }
+            return trailingslashit( esc_url_raw( $domain ) );
+        }
+
+        return '';
+    }
+
+    /**
+     * Write an entry to the dlmues_action_log table.
+     *
+     * @param string $license_key The license key associated with the action.
+     * @param string $action      Short action identifier.
+     * @param string $details     Human-readable detail string.
+     */
+    private function log_admin_action( $license_key, $action, $details = '' ) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'dlmues_action_log';
+
+        // Silently skip if the table doesn't exist yet (e.g. before activation runs).
+        if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) !== $table ) {
+            return;
+        }
+
+        $wpdb->insert(
+            $table,
+            array(
+                'license_key' => sanitize_text_field( $license_key ),
+                'action'      => sanitize_text_field( $action ),
+                'details'     => sanitize_text_field( $details ),
+                'performed_by' => get_current_user_id(),
+                'created_at'  => current_time( 'mysql' ),
+            ),
+            array( '%s', '%s', '%s', '%d', '%s' )
+        );
     }
 }

@@ -69,6 +69,7 @@ class DLMUES_Database {
         $this->create_invoices_table( $charset_collate );
         $this->create_coupons_table( $charset_collate );
         $this->create_api_tokens_table( $charset_collate );
+        $this->create_action_log_table( $charset_collate );
 
         $this->maybe_upgrade();
     }
@@ -259,9 +260,36 @@ class DLMUES_Database {
             created_at datetime DEFAULT '0000-00-00 00:00:00',
             expires_at datetime DEFAULT NULL,
             last_used datetime DEFAULT NULL,
+            token_type varchar(30) DEFAULT 'api',
             PRIMARY KEY  (id),
             KEY token_hash (token_hash),
-            KEY license_id (license_id)
+            KEY license_id (license_id),
+            KEY token_type (token_type)
+        ) {$charset_collate};";
+
+        dbDelta( $sql );
+    }
+
+    /**
+     * Create the dlmues_action_log table.
+     *
+     * Logs admin actions such as populate payment history, login token generation, etc.
+     *
+     * @param string $charset_collate Database charset and collation.
+     */
+    private function create_action_log_table( $charset_collate ) {
+        $table_name = $this->get_table( 'dlmues_action_log' );
+
+        $sql = "CREATE TABLE {$table_name} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            license_key varchar(255) DEFAULT '',
+            action varchar(100) DEFAULT '',
+            details text DEFAULT '',
+            performed_by bigint(20) unsigned DEFAULT 0,
+            created_at datetime DEFAULT '0000-00-00 00:00:00',
+            PRIMARY KEY  (id),
+            KEY license_key (license_key),
+            KEY action (action)
         ) {$charset_collate};";
 
         dbDelta( $sql );
@@ -285,6 +313,10 @@ class DLMUES_Database {
                 $this->wpdb->query( "ALTER TABLE {$this->get_table('dlmues_licenses')} ADD COLUMN IF NOT EXISTS allow_deactivation tinyint(1) DEFAULT 1" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
             }
 
+            if ( version_compare( $installed_version, '1.3.0', '<' ) ) {
+                $this->wpdb->query( "ALTER TABLE {$this->get_table('dlmues_api_tokens')} ADD COLUMN IF NOT EXISTS token_type varchar(30) DEFAULT 'api'" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+            }
+
             update_option( 'dlmues_server_db_version', DLMUES_SERVER_DB_VERSION );
         }
     }
@@ -296,6 +328,7 @@ class DLMUES_Database {
      */
     public function drop_tables() {
         $tables = array(
+            'dlmues_action_log',
             'dlmues_api_tokens',
             'dlmues_invoices',
             'dlmues_site_health',
